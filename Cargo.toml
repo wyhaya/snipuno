@@ -8,8 +8,8 @@ edition = "2024"
 
 [package]
 name = "snipuno"
-version = "0.0.2"
 edition.workspace = true
+publish = false
 
 [profile.release]
 lto = true
@@ -86,6 +86,7 @@ url.workspace = true
 
 [package.metadata.packager]
 product-name = "Snipuno"
+version = "0.0.2"
 identifier = "com.snipuno.desktop"
 icons = ["assets/app.icns", "assets/app.ico", "assets/128x128.png", "assets/256x256.png"]
 out-dir = "dist"

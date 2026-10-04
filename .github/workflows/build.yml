@@ -78,7 +78,7 @@ jobs:
       - name: get app version
         shell: bash
         run: |
-          echo "VERSION=$(lq -Tr '.package.version' Cargo.toml)" >> "$GITHUB_ENV"
+          echo "VERSION=$(lq -Tr '.package.metadata.packager.version' Cargo.toml)" >> "$GITHUB_ENV"
 
       - name: cargo packager (macos)
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
