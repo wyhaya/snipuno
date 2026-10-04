@@ -1,0 +1,105 @@
+[workspace]
+members = ["crates/autostart", "crates/ui"]
+default-members = ["."]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+
+[package]
+name = "snipuno"
+version = "0.0.0"
+edition.workspace = true
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = "symbols"
+
+[workspace.dependencies]
+gpui = { package = "gpui-pre", version = "0.3.7" }
+gpui_platform = { package = "gpui-pre-platform", version = "0.3.7", features = ["font-kit", "wayland", "runtime_shaders"] }
+gpui-base = "0.7.0"
+objc2 = "0.6.4"
+objc2-foundation = "0.3.2"
+tray-icon = { version = "0.25.1", default-features = false }
+url = "2.5.8"
+windows = "0.62.2"
+
+[target.'cfg(windows)'.build-dependencies]
+embed-resource = "3.0.11"
+
+[dependencies]
+arboard = { version = "3.6.1", features = ["wayland-data-control"] }
+autostart = { path = "crates/autostart" }
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+dirs = "7.0.0"
+gpui.workspace = true
+gpui_platform.workspace = true
+gpui-base.workspace = true
+ui = { path = "crates/ui" }
+futures-lite = "2.6.1"
+futures-channel = "0.3.34"
+lyon_path = "1.0.19"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp", "ico"] }
+rodio = { version = "0.22.2", default-features = false, features = ["playback", "wav"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tiny-skia = { version = "0.11.4", default-features = false, features = ["std", "simd"] }
+
+[target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
+tray-icon.workspace = true
+raw-window-handle = "0.6.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+wl-clipboard-rs = "0.9.4"
+ashpd = { version = "0.13.13", default-features = false, features = ["async-io", "screenshot"] }
+url.workspace = true
+tray-icon = { workspace = true, features = ["ksni"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { workspace = true, features = [
+    "Foundation", "Graphics_Capture", "Graphics_DirectX_Direct3D11",
+    "Win32_Foundation", "Win32_Devices_Display", "Win32_Graphics_Direct3D", "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Dwm", "Win32_Graphics_Dxgi_Common", "Win32_Graphics_Gdi",
+    "Win32_System_WinRT_Direct3D11", "Win32_System_WinRT_Graphics_Capture",
+    "Win32_System_Registry", "Win32_System_SystemInformation", "Win32_UI_HiDpi", "Win32_UI_WindowsAndMessaging",
+    "Win32_Security", "Win32_System_Threading", "Win32_System_LibraryLoader",
+    "Win32_Storage_FileSystem",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Wdk_System_SystemServices",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+global-hotkey = "0.8.0"
+block2 = "0.6.2"
+objc2.workspace = true
+objc2-app-kit = "0.3.2"
+objc2-core-foundation = "0.3.2"
+objc2-core-graphics = "0.3.2"
+objc2-foundation.workspace = true
+objc2-screen-capture-kit = "0.3.2"
+
+[dev-dependencies]
+url.workspace = true
+
+[package.metadata.packager]
+product-name = "Snipuno"
+identifier = "com.snipuno.desktop"
+icons = ["assets/app.icns", "assets/app.ico", "assets/128x128.png", "assets/256x256.png"]
+out-dir = "dist"
+
+[package.metadata.packager.macos]
+info-plist-path = "Info.plist"
+signing-identity = "Snipuno Local Development"
+
+[package.metadata.packager.dmg]
+background = "assets/dmg-background.png"
+windowSize = { width = 660, height = 400 }
+appFolderPosition = { x = 480, y = 170 }
+appPosition = { x = 180, y = 170 }
+
+[package.metadata.packager.nsis]
+languages = ["English", "SimpChinese"]
+installer-icon = "assets/app.ico"

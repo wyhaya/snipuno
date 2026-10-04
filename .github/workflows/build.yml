@@ -1,0 +1,114 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - v*.*.*
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.job.target }}
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      matrix:
+        job:
+          - target: aarch64-apple-darwin
+            os: macos-26
+            before_arch: aarch64
+            after_arch: aarch64
+
+          - target: x86_64-apple-darwin
+            os: macos-26
+            before_arch: x64
+            after_arch: x86_64
+
+          - target: x86_64-pc-windows-msvc
+            os: windows-2025
+            before_arch: x64
+            after_arch: x86_64
+
+          - target: aarch64-pc-windows-msvc
+            os: windows-11-arm
+            before_arch: arm64
+            after_arch: aarch64
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v7
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.job.target }}
+      
+      - name: setup cargo binstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: install deps
+        run: |
+          cargo binstall --disable-telemetry --no-confirm cargo-packager@0.11.8
+          cargo binstall --disable-telemetry --no-confirm lq@0.16.0
+
+      - name: Cargo cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ matrix.job.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo test
+        run: |
+          cargo test --release --target ${{ matrix.job.target }}
+
+      - name: cargo Build
+        run: |
+          cargo build --release --target ${{ matrix.job.target }}
+      
+      - name: get app version
+        shell: bash
+        run: |
+          echo "VERSION=$(lq -Tr '.package.version' Cargo.toml)" >> "$GITHUB_ENV"
+
+      - name: cargo packager (macos)
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
+        env:
+          # Sign
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # Notarization
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Fix dmg background
+          CI: 'false'
+        run: |
+          lq -Tti '.package.metadata.packager.macos."signing-identity" = env.APPLE_SIGNING_IDENTITY' Cargo.toml
+          cargo packager -f dmg --release --target ${{ matrix.job.target }}
+          mv ./dist/Snipuno_${{ env.VERSION }}_${{ matrix.job.before_arch }}.dmg ./dist/Snipuno_${{ env.VERSION }}_${{ matrix.job.after_arch }}.dmg
+
+      - name: cargo packager (windows)
+        if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          cargo packager -f nsis --release --target ${{ matrix.job.target }}
+          mv ./dist/snipuno_${{ env.VERSION }}_${{ matrix.job.before_arch }}-setup.exe ./dist/Snipuno_${{ env.VERSION }}_${{ matrix.job.after_arch }}.exe
+
+      - name: GitHub release
+        uses: softprops/action-gh-release@v3
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ./dist/*.dmg
+            ./dist/*.exe

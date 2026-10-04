@@ -1,0 +1,11 @@
+[package]
+name = "ui"
+edition.workspace = true
+publish = false
+
+[dependencies]
+gpui.workspace = true
+gpui-base.workspace = true
+
+[dev-dependencies]
+gpui_platform.workspace = true
