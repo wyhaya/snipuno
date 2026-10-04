@@ -8,7 +8,7 @@ edition = "2024"
 
 [package]
 name = "snipuno"
-version = "0.0.0"
+version = "0.0.1"
 edition.workspace = true
 
 [profile.release]
