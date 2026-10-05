@@ -96,14 +96,14 @@ jobs:
         run: |
           lq -Tti '.package.metadata.packager.macos."signing-identity" = env.APPLE_SIGNING_IDENTITY' Cargo.toml
           cargo packager -f dmg --release --target ${{ matrix.job.target }}
-          mv ./dist/Snipuno_${{ env.VERSION }}_${{ matrix.job.before_arch }}.dmg ./dist/Snipuno_${{ env.VERSION }}_${{ matrix.job.after_arch }}.dmg
+          mv ./dist/Snipuno_${{ env.VERSION }}_${{ matrix.job.before_arch }}.dmg ./dist/Snipuno_${{ env.VERSION }}_macos_${{ matrix.job.after_arch }}.dmg
 
       - name: cargo packager (windows)
         if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           cargo packager -f nsis --release --target ${{ matrix.job.target }}
-          mv ./dist/snipuno_${{ env.VERSION }}_${{ matrix.job.before_arch }}-setup.exe ./dist/Snipuno_${{ env.VERSION }}_${{ matrix.job.after_arch }}.exe
+          mv ./dist/snipuno_${{ env.VERSION }}_${{ matrix.job.before_arch }}-setup.exe ./dist/Snipuno_${{ env.VERSION }}_windows_${{ matrix.job.after_arch }}.exe
 
       - name: GitHub release
         uses: softprops/action-gh-release@v3
