@@ -47,14 +47,6 @@ jobs:
         with:
           toolchain: stable
           targets: ${{ matrix.job.target }}
-      
-      - name: setup cargo binstall
-        uses: cargo-bins/cargo-binstall@main
-
-      - name: install deps
-        run: |
-          cargo binstall --disable-telemetry --no-confirm cargo-packager@0.11.8
-          cargo binstall --disable-telemetry --no-confirm lq@0.16.0
 
       - name: Cargo cache
         uses: actions/cache@v6
@@ -66,6 +58,14 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ matrix.job.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: setup cargo binstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: install deps
+        run: |
+          cargo binstall --disable-telemetry --no-confirm cargo-packager@0.11.8
+          cargo binstall --disable-telemetry --no-confirm lq@0.16.0
 
       - name: cargo test
         run: |
