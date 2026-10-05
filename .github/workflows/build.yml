@@ -64,8 +64,8 @@ jobs:
 
       - name: install deps
         run: |
-          cargo binstall --disable-telemetry --no-confirm cargo-packager@0.11.8
-          cargo binstall --disable-telemetry --no-confirm lq@0.16.0
+          cargo binstall --disable-telemetry --force --no-confirm cargo-packager@0.11.8
+          cargo binstall --disable-telemetry --force --no-confirm lq@0.16.0
 
       - name: cargo test
         run: |
