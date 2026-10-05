@@ -459,6 +459,7 @@ fn display_mode_pixel_size(id: u32) -> Option<(usize, usize)> {
 
 pub struct OverlayWindow {
     native: Retained<NSWindow>,
+    view: Retained<NSView>,
     bounds: CaptureBounds,
 }
 
@@ -469,13 +470,19 @@ pub fn prepare_overlay<T: 'static>(
 ) -> Result<OverlayWindow, String> {
     let view = native_view(window)?;
     let native = view.window().ok_or("The capture window has closed.")?;
+    let cleanup_view = view.clone();
     cx.on_release(move |_, cx| {
         // GPUI 0.3.5's AccessKit adapter retains the content view after window close.
         // Detach its GPUI subview after teardown to release the state and renderer.
-        cx.spawn(async move |_| view.removeFromSuperview()).detach();
+        cx.spawn(async move |_| cleanup_view.removeFromSuperview())
+            .detach();
     })
     .detach();
-    Ok(OverlayWindow { native, bounds })
+    Ok(OverlayWindow {
+        native,
+        view,
+        bounds,
+    })
 }
 
 impl OverlayWindow {
@@ -511,6 +518,8 @@ impl OverlayWindow {
     pub fn show(&self) {
         self.native.orderFrontRegardless();
         self.native.makeKeyWindow();
+        // Changing the style mask can clear AppKit's first responder.
+        self.native.makeFirstResponder(Some(&self.view));
     }
 }
 
