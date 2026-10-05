@@ -5,7 +5,7 @@ pub const TEXT: u32 = 0x26364d;
 pub const SURFACE: u32 = 0xffffff;
 pub const DANGER: u32 = 0xf05263;
 pub const GUIDE_COLOR: u32 = 0xff000000 | DANGER;
-pub const ALIGNMENT_GUIDE_ALPHA: u32 = 0x66;
+pub const ALIGNMENT_GUIDE_ALPHA: u32 = 0xcc;
 pub const DIMMING: u32 = 0x000000;
 
 pub const ANNOTATION_RADIUS: f32 = 10.0;

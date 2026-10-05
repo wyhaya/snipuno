@@ -190,7 +190,7 @@ impl Render for CaptureOverlay {
                         if let Some(selected) = selected {
                             let mut frame =
                                 outline(selected, rgb(theme::BRAND), BorderStyle::Solid);
-                            frame.border_widths = px(2.0).into();
+                            frame.border_widths = px(1.0).into();
                             window.paint_quad(frame);
                             if let Some(label) = label {
                                 paint_dimension_label(label, selected, bounds, window, cx);
