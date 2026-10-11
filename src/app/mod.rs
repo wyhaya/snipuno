@@ -8,7 +8,6 @@ mod interaction;
 mod measurement_loupe;
 mod options;
 mod options_panel;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod pinned;
 mod preferences;
 mod state;

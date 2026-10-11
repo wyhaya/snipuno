@@ -383,18 +383,11 @@ impl Desktop {
         super::menu::update(can_reopen, cx);
         if let Some(tray) = &mut self.tray
             && let Err(error) = tray.update(MenuState {
-                shortcut: if cfg!(target_os = "linux") {
-                    None
-                } else {
-                    self.active.as_ref()
-                },
-                color_shortcut: if cfg!(target_os = "linux") {
-                    None
-                } else {
-                    self.service
-                        .as_ref()
-                        .and_then(|service| service.color_active.as_ref())
-                },
+                shortcut: self.active.as_ref(),
+                color_shortcut: self
+                    .service
+                    .as_ref()
+                    .and_then(|service| service.color_active.as_ref()),
                 fullscreen_shortcut: self
                     .service
                     .as_ref()

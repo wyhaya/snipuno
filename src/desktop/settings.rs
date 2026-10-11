@@ -71,9 +71,6 @@ impl<B: ShortcutBackend> ShortcutService<B> {
     }
 
     pub async fn initialize(&mut self) {
-        if cfg!(target_os = "linux") {
-            return;
-        }
         let mut errors = Vec::new();
         for (active, shortcut, name) in [
             (&mut self.active, SCREENSHOT_SHORTCUT, "Screenshot shortcut"),

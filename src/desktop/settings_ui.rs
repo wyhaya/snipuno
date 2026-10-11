@@ -193,38 +193,18 @@ impl Render for SettingsView {
             .title("Shortcuts")
             .field(
                 "Full Screen Screenshot",
-                if cfg!(target_os = "linux") {
-                    "Capture your screen. Shortcut works while Snipuno is focused."
-                } else {
-                    "Capture the entire screen under the pointer."
-                },
+                "Capture the entire screen under the pointer.",
                 Kbd::new(FULLSCREEN_SHORTCUT.key_labels()),
             )
             .field(
                 "Area Screenshot",
                 "Capture an area of your screen.",
-                if cfg!(target_os = "linux") {
-                    div()
-                        .text_xs()
-                        .text_color(colors.muted_foreground)
-                        .child("Tray menu")
-                        .into_any_element()
-                } else {
-                    Kbd::new(SCREENSHOT_SHORTCUT.key_labels()).into_any_element()
-                },
+                Kbd::new(SCREENSHOT_SHORTCUT.key_labels()),
             )
             .field(
                 "Color picker",
                 "Pick a color from your screen and copy it.",
-                if cfg!(target_os = "linux") {
-                    div()
-                        .text_xs()
-                        .text_color(colors.muted_foreground)
-                        .child("Tray menu")
-                        .into_any_element()
-                } else {
-                    Kbd::new(COLOR_PICKER_SHORTCUT.key_labels()).into_any_element()
-                },
+                Kbd::new(COLOR_PICKER_SHORTCUT.key_labels()),
             );
         // TODO: Resolve logical dimensions for opened images.
         // Captures retain their source scale, while decoded files default to 1x, so

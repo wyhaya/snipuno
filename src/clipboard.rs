@@ -1,6 +1,6 @@
 use crate::image_processing::{decode_overlay, load_overlay};
 use arboard::{Clipboard, ImageData};
-use gpui::{App, ClipboardEntry, ClipboardItem, Global, RenderImage, Task};
+use gpui::{App, ClipboardEntry, ClipboardItem, RenderImage, Task};
 use image::{ImageReader, RgbaImage};
 use std::{
     io::Cursor,
@@ -8,19 +8,12 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-#[derive(Clone, Default)]
-struct State(Arc<Mutex<Option<Clipboard>>>);
-
-impl Global for State {}
+static WRITE_LOCK: Mutex<()> = Mutex::new(());
 
 pub fn init(cx: &mut App) {
-    cx.set_global(State::default());
     cx.on_app_quit(|cx| {
-        let state = cx.global::<State>().clone();
-        cx.background_executor().spawn(async move {
-            if let Ok(mut clipboard) = state.0.lock() {
-                clipboard.take();
-            }
+        cx.background_executor().spawn(async {
+            drop(WRITE_LOCK.lock());
         })
     })
     .detach();
@@ -34,9 +27,6 @@ pub fn read_image(cx: &App) -> Task<Result<Option<Arc<RenderImage>>, String>> {
         {
             return Ok(Some(image));
         }
-        #[cfg(target_os = "linux")]
-        return wayland::read_image_file();
-        #[cfg(not(target_os = "linux"))]
         Ok(None)
     })
 }
@@ -49,19 +39,14 @@ pub fn write_image_with(
     prepare: impl FnOnce() -> Result<Arc<RgbaImage>, String> + Send + 'static,
     cx: &App,
 ) -> Task<Result<(), String>> {
-    let state = cx.global::<State>().clone();
     cx.background_executor().spawn(async move {
         let pixels = prepare()?;
         if pixels.width() == 0 || pixels.height() == 0 {
             return Err("Cannot copy an empty image.".into());
         }
-        let mut clipboard = state.0.lock().map_err(|error| error.to_string())?;
-        if clipboard.is_none() {
-            *clipboard = Some(Clipboard::new().map_err(|error| error.to_string())?);
-        }
+        let _guard = WRITE_LOCK.lock().map_err(|error| error.to_string())?;
+        let mut clipboard = Clipboard::new().map_err(|error| error.to_string())?;
         clipboard
-            .as_mut()
-            .unwrap()
             .set_image(ImageData {
                 width: pixels.width() as usize,
                 height: pixels.height() as usize,
@@ -91,87 +76,6 @@ fn decode_item(item: ClipboardItem) -> Result<Option<Arc<RenderImage>>, String> 
 
 fn read_file(path: PathBuf) -> Result<Arc<RenderImage>, String> {
     load_overlay(path).map(|(image, _)| image)
-}
-
-#[cfg(any(target_os = "linux", all(test, unix)))]
-mod wayland {
-    use super::*;
-    use url::Url;
-
-    // GPUI's Wayland clipboard reads image MIME types but does not expose file lists.
-    #[cfg(target_os = "linux")]
-    pub(super) fn read_image_file() -> Result<Option<Arc<RenderImage>>, String> {
-        use std::io::Read;
-        use wl_clipboard_rs::paste::{self, ClipboardType, Error, MimeType, Seat};
-
-        let (mut pipe, _) = match paste::get_contents(
-            ClipboardType::Regular,
-            Seat::Unspecified,
-            MimeType::Specific("text/uri-list"),
-        ) {
-            Ok(contents) => contents,
-            Err(Error::ClipboardEmpty | Error::NoMimeType | Error::NoSeats) => return Ok(None),
-            // Ordinary GPUI image reads still work without data-control support.
-            Err(Error::MissingProtocol { .. }) => return Ok(None),
-            Err(error) => return Err(error.to_string()),
-        };
-        let mut uris = String::new();
-        pipe.read_to_string(&mut uris)
-            .map_err(|error| error.to_string())?;
-        decode_file_list(&uris)
-    }
-
-    fn decode_file_list(uris: &str) -> Result<Option<Arc<RenderImage>>, String> {
-        first_file(uris).map(read_file).transpose()
-    }
-
-    fn first_file(uris: &str) -> Option<PathBuf> {
-        uris.lines()
-            .filter(|line| !line.starts_with('#'))
-            .filter_map(|line| Url::parse(line).ok())
-            .find_map(|url| url.to_file_path().ok())
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        use crate::test_support::TestDir;
-        use image::Rgba;
-
-        #[test]
-        fn uri_lists_handle_line_endings_comments_and_escaped_paths() {
-            for newline in ["\r\n", "\n"] {
-                let uris = format!(
-                    "# copied files{newline}{newline}file:///tmp/a%20b%23c.png{newline}file:///tmp/second.png{newline}"
-                );
-                assert_eq!(first_file(&uris), Some(PathBuf::from("/tmp/a b#c.png")));
-            }
-            assert_eq!(
-                first_file("file:///tmp/a.png%0D\r\n"),
-                Some(PathBuf::from("/tmp/a.png\r"))
-            );
-            assert_eq!(
-                first_file("file://localhost/tmp/a.png\r\n"),
-                Some(PathBuf::from("/tmp/a.png"))
-            );
-            assert!(first_file("file://remote/tmp/a.png\r\n").is_none());
-            assert!(first_file("# empty\r\nhttps://example.com/a.png\r\nnot a uri").is_none());
-        }
-
-        #[test]
-        fn crlf_file_list_loads_the_actual_image() {
-            let dir = TestDir::new();
-            let path = dir.join("a b#中文.png");
-            RgbaImage::from_pixel(2, 3, Rgba([10, 20, 30, 128]))
-                .save(&path)
-                .unwrap();
-            let uris = format!("{}\r\n", Url::from_file_path(&path).unwrap());
-            let result = decode_file_list(&uris);
-            let image = result.unwrap().unwrap();
-            assert_eq!(&image.as_bytes(0).unwrap()[..4], &[30, 20, 10, 128]);
-            assert!(decode_file_list("").unwrap().is_none());
-        }
-    }
 }
 
 #[cfg(test)]

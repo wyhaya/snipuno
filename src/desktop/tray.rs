@@ -65,7 +65,7 @@ impl Tray {
         .map_err(|error| error.to_string())?;
         #[cfg(target_os = "windows")]
         let foreground = system_foreground();
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(target_os = "macos")]
         let foreground = None;
         let icon = TrayIconBuilder::new()
             .with_id(TRAY)
@@ -206,7 +206,7 @@ fn accelerator(shortcut: &Shortcut) -> Result<Accelerator, String> {
 fn load_icon(cx: &App, foreground: Option<(u8, u8)>) -> Result<Icon, String> {
     #[cfg(target_os = "windows")]
     let svg: &[u8] = include_bytes!("../../assets/tray-windows.svg");
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     let svg: &[u8] = include_bytes!("../../assets/tray.svg");
     let image = cx
         .svg_renderer()

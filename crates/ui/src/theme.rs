@@ -143,10 +143,8 @@ fn resolve_fonts(cx: &mut App) {
     }
     let alternates = if cfg!(target_os = "macos") {
         &["Monaco", "Courier New"][..]
-    } else if cfg!(target_os = "windows") {
-        &["Cascadia Mono", "Courier New"][..]
     } else {
-        &["Noto Sans Mono", "Liberation Mono", "Ubuntu Mono"][..]
+        &["Cascadia Mono", "Courier New"][..]
     };
     typography.mono = std::iter::once(typography.mono.as_ref())
         .chain(alternates.iter().copied())

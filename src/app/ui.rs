@@ -466,7 +466,7 @@ impl ScreenshotEditor {
                     {
                         this.pl(crate::desktop::titlebar_content_start(window))
                     }
-                    #[cfg(not(target_os = "macos"))]
+                    #[cfg(target_os = "windows")]
                     {
                         this
                     }
@@ -504,32 +504,23 @@ impl ScreenshotEditor {
                 ToolbarGroup::new("export-tools")
                     .label("Export")
                     .gap(px(TOOLBAR_GAP))
-                    .map(|group| {
-                        #[cfg(any(target_os = "macos", target_os = "windows"))]
-                        {
-                            group.child(
-                                Button::icon("pin-image", Icon::Pin)
-                                    .accessibility_label("Pin screenshot")
-                                    .tool_tooltip(
-                                        ToolTooltip::new("Pin screenshot")
-                                            .description("Keep this image above other windows."),
-                                    )
-                                    .disabled(
-                                        self.importing_image
-                                            || self.exporting_image
-                                            || self.crop.is_some()
-                                            || self.editor.is_dragging(),
-                                    )
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.export_image(Destination::Pinned, window, cx);
-                                    })),
+                    .child(
+                        Button::icon("pin-image", Icon::Pin)
+                            .accessibility_label("Pin screenshot")
+                            .tool_tooltip(
+                                ToolTooltip::new("Pin screenshot")
+                                    .description("Keep this image above other windows."),
                             )
-                        }
-                        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-                        {
-                            group
-                        }
-                    })
+                            .disabled(
+                                self.importing_image
+                                    || self.exporting_image
+                                    || self.crop.is_some()
+                                    || self.editor.is_dragging(),
+                            )
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.export_image(Destination::Pinned, window, cx);
+                            })),
+                    )
                     .child(
                         Button::icon("copy-image", Icon::Copy)
                             .accessibility_label("Copy image")
@@ -709,14 +700,6 @@ impl ScreenshotEditor {
                 cfg!(target_os = "windows") && !window.is_fullscreen(),
                 |this| this.child(window_controls(window, cx)),
             )
-            .when(cfg!(target_os = "linux"), |this| {
-                this.child(
-                    Button::icon("close-editor", Icon::X)
-                        .accessibility_label("Close editor")
-                        .tool_tooltip(ToolTooltip::new("Close editor"))
-                        .on_click(cx.listener(|this, _, window, cx| this.close(window, cx))),
-                )
-            })
     }
 }
 

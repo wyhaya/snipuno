@@ -32,4 +32,4 @@ Snipuno is a simple, lightweight, open-source screen capture and annotation soft
 | --- | --- |
 | macOS | Supported |
 | Windows | Supported |
-| Linux | Planned |
+| Linux | Not supported |

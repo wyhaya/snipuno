@@ -1,18 +1,14 @@
-#[cfg(not(target_os = "linux"))]
-use super::CaptureWindowFilter;
 use super::{
-    CapturePoint, CaptureSnapshot, CapturedImage,
+    CapturePoint, CaptureSnapshot, CaptureWindowFilter, CapturedImage,
     color::{ColorOverlay, ColorOverlayEvent},
     overlay::{CaptureOverlay, CaptureOverlayEvent},
     placement::{CapturePlacement, MIN_EDITOR_HEIGHT, MIN_EDITOR_WIDTH, minimum_size},
     platform,
     selection::{CaptureSelection, crop_region, fullscreen_selection},
 };
-#[cfg(not(target_os = "linux"))]
-use crate::desktop::COLOR_PICKER_SHORTCUT;
 use crate::{
     app::{ScreenshotEditor, ScreenshotState},
-    desktop::{self, SoundEffect, WindowRole},
+    desktop::{self, COLOR_PICKER_SHORTCUT, SoundEffect, WindowRole},
     image_processing::{SourceImage, render_image},
 };
 use futures_lite::future::race;
@@ -175,12 +171,6 @@ pub fn install(cx: &mut App) {
         CancelCapture,
         Some("CaptureOverlay"),
     )]);
-    #[cfg(target_os = "linux")]
-    cx.bind_keys([
-        KeyBinding::new("ctrl-shift-1", FullscreenScreenshot, None),
-        KeyBinding::new("ctrl-shift-2", NewScreenshot, None),
-    ]);
-    #[cfg(not(target_os = "linux"))]
     cx.bind_keys([KeyBinding::new(
         &COLOR_PICKER_SHORTCUT.keystroke(),
         PickColor,
@@ -225,105 +215,9 @@ impl CaptureController {
             return;
         }
         self.mode = mode;
-        #[cfg(target_os = "linux")]
-        self.begin_portal(from_tray, cx);
-        #[cfg(not(target_os = "linux"))]
-        self.begin(from_tray, cx);
-    }
-
-    #[cfg(target_os = "linux")]
-    fn begin(&mut self, cx: &mut Context<Self>) {
-        self.begin_portal(false, cx);
-    }
-
-    #[cfg(target_os = "linux")]
-    fn begin_portal(&mut self, from_tray: bool, cx: &mut Context<Self>) {
-        if self.stage != Stage::Idle || !desktop::can_capture(cx) {
-            return;
-        }
         self.session = self.session.wrapping_add(1);
         self.stage = Stage::Preparing;
         desktop::capture_started(cx);
-        let session = self.session;
-        self.capture_task = Some(cx.spawn(async move |this, cx| {
-            // TODO: D-Bus Menu has a `closed` event, but ksni currently ignores it.
-            // Use it when exposed, retaining a fallback and allowing for host exit animations.
-            if from_tray {
-                cx.background_executor()
-                    .timer(Duration::from_millis(300))
-                    .await;
-            }
-            let result = cx
-                .background_executor()
-                .spawn(async {
-                    platform::portal_screenshot().await.map(|pixels| {
-                        pixels.map(|pixels| {
-                            let preview = render_image(pixels.clone());
-                            (pixels, preview)
-                        })
-                    })
-                })
-                .await;
-            let _ = this.update(cx, |this, cx| {
-                if this.session != session || this.stage != Stage::Preparing {
-                    return;
-                }
-                match result {
-                    Ok(Some((pixels, preview))) => {
-                        let displays = cx.displays();
-                        if displays.len() > 1 {
-                            this.finish(Some("Fullscreen portal selection currently supports one display. Multi-display screenshot mapping is not available yet.".into()), cx);
-                            return;
-                        }
-                        let Some(display) = displays.into_iter().next() else {
-                            this.finish(Some("No display is available for screenshot selection.".into()), cx);
-                            return;
-                        };
-                        let bounds = display.bounds();
-                        let width = f64::from(f32::from(bounds.size.width));
-                        let height = f64::from(f32::from(bounds.size.height));
-                        if width <= 0.0 || height <= 0.0
-                            || (f64::from(pixels.width()) * height / width - f64::from(pixels.height())).abs() > 2.0
-                        {
-                            this.finish(Some("The portal screenshot does not match the display dimensions. Fullscreen selection cannot place it accurately.".into()), cx);
-                            return;
-                        }
-                        let snapshot = CaptureSnapshot {
-                            displays: vec![super::DisplaySnapshot {
-                                id: super::CaptureDisplayId(u64::from(display.id())),
-                                bounds: super::CaptureBounds {
-                                    x: f64::from(f32::from(bounds.origin.x)),
-                                    y: f64::from(f32::from(bounds.origin.y)),
-                                    width,
-                                    height,
-                                },
-                                ui_scale: 1.0,
-                                mode_pixel_size: (
-                                    pixels.width() as usize,
-                                    pixels.height() as usize,
-                                ),
-                                pixels: Arc::new(pixels),
-                            }],
-                            windows: vec![],
-                        };
-                        this.select(snapshot, vec![preview], None, cx);
-                    }
-                    Ok(None) => this.finish(None, cx),
-                    Err(error) => this.finish(Some(error), cx),
-                }
-            });
-        }));
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    fn begin(&mut self, from_tray: bool, cx: &mut Context<Self>) {
-        if self.stage != Stage::Idle || !desktop::can_capture(cx) {
-            return;
-        }
-        self.session = self.session.wrapping_add(1);
-        self.stage = Stage::Preparing;
-        desktop::capture_started(cx);
-        let mode = self.mode;
         let pointer = if mode == CaptureMode::Fullscreen {
             platform::pointer_position()
         } else {
@@ -431,79 +325,43 @@ impl CaptureController {
                     px((bounds.height / ui_scale) as f32),
                 ),
             );
-            let mut open_overlay = |kind, fullscreen, cx: &mut Context<Self>| {
-                cx.open_window(
-                    WindowOptions {
-                        kind,
-                        show: cfg!(target_os = "linux"),
-                        focus: cfg!(target_os = "linux"),
-                        titlebar: None,
-                        is_movable: false,
-                        is_resizable: cfg!(target_os = "linux"),
-                        is_minimizable: false,
-                        app_owns_titlebar_drag: true,
-                        display_id: Some(DisplayId::new(display.id.0)),
-                        window_bounds: Some(if fullscreen {
-                            WindowBounds::Fullscreen(overlay_bounds)
-                        } else {
-                            WindowBounds::Windowed(overlay_bounds)
-                        }),
-                        #[cfg(target_os = "linux")]
-                        app_id: Some("com.snipuno.selection".into()),
-                        ..Default::default()
-                    },
-                    |window, cx| {
-                        observe_window(window, cx);
-                        if mode == CaptureMode::Color {
-                            let view = cx.new(|cx| {
-                                ColorOverlay::new(display.clone(), image.clone(), window, cx)
-                            });
-                            color_overlay = Some(view.clone());
-                            cx.new(|_| OverlayRoot(view.into()))
-                        } else {
-                            let view = cx.new(|cx| {
-                                CaptureOverlay::new(
-                                    display.clone(),
-                                    image.clone(),
-                                    windows.clone(),
-                                    window,
-                                    cx,
-                                )
-                            });
-                            overlay = Some(view.clone());
-                            cx.new(|_| OverlayRoot(view.into()))
-                        }
-                    },
-                )
-            };
-            #[cfg(target_os = "linux")]
-            let handle = {
-                use gpui::layer_shell::{
-                    Anchor, KeyboardInteractivity, Layer, LayerShellNotSupportedError,
-                    LayerShellOptions,
-                };
-
-                let kind = WindowKind::LayerShell(LayerShellOptions {
-                    namespace: "snipuno-selection".into(),
-                    layer: Layer::Overlay,
-                    anchor: Anchor::TOP | Anchor::BOTTOM | Anchor::LEFT | Anchor::RIGHT,
-                    exclusive_zone: Some(px(-1.0)),
-                    keyboard_interactivity: KeyboardInteractivity::Exclusive,
+            let handle = cx.open_window(
+                WindowOptions {
+                    kind: WindowKind::PopUp,
+                    show: false,
+                    focus: false,
+                    titlebar: None,
+                    is_movable: false,
+                    is_resizable: false,
+                    is_minimizable: false,
+                    app_owns_titlebar_drag: true,
+                    display_id: Some(DisplayId::new(display.id.0)),
+                    window_bounds: Some(WindowBounds::Windowed(overlay_bounds)),
                     ..Default::default()
-                });
-                match open_overlay(kind, false, cx) {
-                    Err(error)
-                        if error
-                            .downcast_ref::<LayerShellNotSupportedError>()
-                            .is_some() =>
-                    {
-                        open_overlay(WindowKind::Normal, true, cx)
+                },
+                |window, cx| {
+                    observe_window(window, cx);
+                    if mode == CaptureMode::Color {
+                        let view = cx.new(|cx| {
+                            ColorOverlay::new(display.clone(), image.clone(), window, cx)
+                        });
+                        color_overlay = Some(view.clone());
+                        cx.new(|_| OverlayRoot(view.into()))
+                    } else {
+                        let view = cx.new(|cx| {
+                            CaptureOverlay::new(
+                                display.clone(),
+                                image.clone(),
+                                windows.clone(),
+                                window,
+                                cx,
+                            )
+                        });
+                        overlay = Some(view.clone());
+                        cx.new(|_| OverlayRoot(view.into()))
                     }
-                    result => result,
-                }
-            };
-            #[cfg(not(target_os = "linux"))]
-            let handle = open_overlay(WindowKind::PopUp, false, cx);
+                },
+            );
             let handle = match handle {
                 Ok(handle) => handle,
                 Err(error) => {
@@ -531,7 +389,7 @@ impl CaptureController {
                     }
                 }
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(target_os = "windows")]
             {
                 let configured = handle.update(cx, |_, window, cx| {
                     platform::configure_overlay(window, bounds, cx)
@@ -566,28 +424,22 @@ impl CaptureController {
                         }
                         match event {
                             ColorOverlayEvent::Picked(color) => {
-                                #[cfg(not(target_os = "linux"))]
-                                {
-                                    let Some(snapshot) = this.snapshot.as_ref() else {
-                                        this.finish(
-                                            Some(
-                                                "The capture session is no longer available."
-                                                    .into(),
-                                            ),
-                                            cx,
-                                        );
-                                        return;
-                                    };
-                                    if !platform::display_layout_matches(&snapshot.displays) {
-                                        this.finish(
-                                            Some(
-                                                "The display layout changed. Please start again."
-                                                    .into(),
-                                            ),
-                                            cx,
-                                        );
-                                        return;
-                                    }
+                                let Some(snapshot) = this.snapshot.as_ref() else {
+                                    this.finish(
+                                        Some("The capture session is no longer available.".into()),
+                                        cx,
+                                    );
+                                    return;
+                                };
+                                if !platform::display_layout_matches(&snapshot.displays) {
+                                    this.finish(
+                                        Some(
+                                            "The display layout changed. Please start again."
+                                                .into(),
+                                        ),
+                                        cx,
+                                    );
+                                    return;
                                 }
                                 cx.write_to_clipboard(ClipboardItem::new_string(color.clone()));
                                 desktop::play_sound_effect(SoundEffect::PickColor, cx);
@@ -600,7 +452,7 @@ impl CaptureController {
         }
         #[cfg(target_os = "macos")]
         self.show_macos_overlays(native_overlays, cx);
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(target_os = "windows")]
         {
             self.stage = Stage::Selecting;
             for handle in self.overlays.clone() {
@@ -684,7 +536,6 @@ impl CaptureController {
             );
             return;
         };
-        #[cfg(not(target_os = "linux"))]
         if self.stage == Stage::Selecting && !platform::display_layout_matches(&snapshot.displays) {
             self.finish(
                 Some("The display layout changed. Please start again.".into()),
@@ -694,11 +545,7 @@ impl CaptureController {
         }
         self.stage = Stage::Finalizing;
         self.close_overlays(cx);
-        let placement = if cfg!(target_os = "linux") {
-            None
-        } else {
-            CapturePlacement::new(&selection, &snapshot.displays)
-        };
+        let placement = CapturePlacement::new(&selection, &snapshot.displays);
         let session = self.session;
         self.capture_task = Some(cx.spawn(async move |this, cx| {
             let result = match selection {
@@ -890,38 +737,17 @@ pub(crate) fn open_editor(
             )
         },
     );
-    #[cfg(target_os = "linux")]
-    let display_id = display_id.or_else(|| {
-        cx.primary_display()
-            .or_else(|| cx.displays().into_iter().next())
-            .map(|display| display.id())
-    });
-    #[cfg(target_os = "linux")]
-    let initial_size =
-        display_id
-            .and_then(|id| cx.find_display(id))
-            .map_or(initial_size, |display| {
-                let available = display.bounds().size;
-                size(
-                    initial_size.width.min(available.width * 0.9),
-                    initial_size.height.min(available.height * 0.9),
-                )
-            });
     let bounds = Bounds::centered(display_id, initial_size, cx);
     let mut editor = None;
     let handle: AnyWindowHandle = cx
         .open_window(
             WindowOptions {
-                #[cfg(target_os = "linux")]
-                app_id: Some("com.snipuno.editor".into()),
                 titlebar: Some(TitlebarOptions {
                     title: Some(title.into()),
                     appears_transparent: true,
                     ..Default::default()
                 }),
                 app_owns_titlebar_drag: true,
-                is_resizable: !cfg!(target_os = "linux"),
-                is_minimizable: !cfg!(target_os = "linux"),
                 inactive_frame_interval: Some(Duration::from_millis(500)),
                 display_id,
                 show: placement.is_none() || cfg!(target_os = "windows"),

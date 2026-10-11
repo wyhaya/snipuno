@@ -18,19 +18,18 @@ strip = "symbols"
 
 [workspace.dependencies]
 gpui = { package = "gpui-pre", version = "0.3.7" }
-gpui_platform = { package = "gpui-pre-platform", version = "0.3.7", features = ["font-kit", "wayland", "runtime_shaders"] }
+gpui_platform = { package = "gpui-pre-platform", version = "0.3.7", features = ["font-kit", "runtime_shaders"] }
 gpui-base = "0.7.0"
 objc2 = "0.6.4"
 objc2-foundation = "0.3.2"
 tray-icon = { version = "0.25.1", default-features = false }
-url = "2.5.8"
 windows = "0.62.2"
 
 [target.'cfg(windows)'.build-dependencies]
 embed-resource = "3.0.11"
 
 [dependencies]
-arboard = { version = "3.6.1", features = ["wayland-data-control"] }
+arboard = "3.6.1"
 autostart = { path = "crates/autostart" }
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 dirs = "7.0.0"
@@ -47,15 +46,8 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 tiny-skia = { version = "0.11.4", default-features = false, features = ["std", "simd"] }
 
-[target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 tray-icon.workspace = true
 raw-window-handle = "0.6.2"
-
-[target.'cfg(target_os = "linux")'.dependencies]
-wl-clipboard-rs = "0.9.4"
-ashpd = { version = "0.13.13", default-features = false, features = ["async-io", "screenshot"] }
-url.workspace = true
-tray-icon = { workspace = true, features = ["ksni"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { workspace = true, features = [
@@ -80,9 +72,6 @@ objc2-core-foundation = "0.3.2"
 objc2-core-graphics = "0.3.2"
 objc2-foundation.workspace = true
 objc2-screen-capture-kit = "0.3.2"
-
-[dev-dependencies]
-url.workspace = true
 
 [package.metadata.packager]
 product-name = "Snipuno"

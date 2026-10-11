@@ -1,9 +1,5 @@
 mod menu;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod pinned_geometry;
-#[cfg(target_os = "linux")]
-#[path = "linux.rs"]
-mod platform;
 #[cfg(target_os = "macos")]
 #[path = "macos.rs"]
 mod platform;
@@ -31,7 +27,6 @@ pub use platform::start_window_move;
 pub(crate) use platform::{
     center_window_controls, set_pinned_controls_visible, titlebar_content_start,
 };
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use platform::{
     configure_pinned_window, pinned_window_contains_pointer, resize_pinned_window,
 };
@@ -39,7 +34,6 @@ pub use resident::{
     activate_window, can_capture, capture_finished, capture_started, install, play_sound_effect,
     prepare_window, reopen, screenshot_ready, show_settings, track_window, window_activated,
 };
-#[cfg(not(target_os = "linux"))]
 pub(crate) use shortcut::COLOR_PICKER_SHORTCUT;
 pub use sound::SoundEffect;
 
@@ -76,7 +70,7 @@ pub struct MenuState<'a> {
     pub warning: bool,
 }
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(target_os = "macos")]
 pub fn start_window_move(window: &gpui::Window, _: &App) {
     window.start_window_move();
 }

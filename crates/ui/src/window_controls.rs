@@ -45,7 +45,7 @@ pub fn window_controls(window: &Window, cx: &App) -> impl IntoElement {
         ))
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
 pub fn window_controls(_: &Window, _: &App) -> impl IntoElement {
     div()
 }

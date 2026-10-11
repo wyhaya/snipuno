@@ -1,5 +1,4 @@
 use super::*;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::capture::set_window_visible;
 use crate::{
     canvas::prepare_measurement_label,
@@ -12,13 +11,11 @@ use chrono::Local;
 pub(super) enum Destination {
     Clipboard,
     File,
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
     Pinned,
 }
 
 struct PreparedImage {
     cache: ExportCache,
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
     pinned: Option<Arc<RenderImage>>,
 }
 
@@ -112,7 +109,6 @@ impl ScreenshotEditor {
             cx.prompt_for_new_path(&directory, Some(&filename))
         });
         self.exporting_image = true;
-        #[cfg(any(target_os = "macos", target_os = "windows"))]
         if matches!(destination, Destination::Pinned) {
             let _ = set_window_visible(window, false);
         }
@@ -138,7 +134,6 @@ impl ScreenshotEditor {
                             cache.save(&path)?;
                         }
                         Ok(Some(PreparedImage {
-                            #[cfg(any(target_os = "macos", target_os = "windows"))]
                             pinned: matches!(destination, Destination::Pinned).then(|| {
                                 crate::image_processing::render_image((*cache.pixels()).clone())
                             }),
@@ -152,7 +147,6 @@ impl ScreenshotEditor {
                 this.exporting_image = false;
                 match result {
                     Ok(Some(prepared)) => {
-                        #[cfg(any(target_os = "macos", target_os = "windows"))]
                         if let Some(image) = prepared.pinned {
                             match super::pinned::open(
                                 this.screenshot.clone(),
@@ -175,13 +169,11 @@ impl ScreenshotEditor {
                     }
                     Ok(None) => {}
                     Err(error) => {
-                        #[cfg(any(target_os = "macos", target_os = "windows"))]
                         if matches!(destination, Destination::Pinned) {
                             let _ = set_window_visible(window, true);
                         }
                         show_error(
                             match destination {
-                                #[cfg(any(target_os = "macos", target_os = "windows"))]
                                 Destination::Pinned => "Unable to pin screenshot",
                                 _ => "Unable to export image",
                             },

@@ -241,7 +241,7 @@ impl PinnedScreenshot {
                 {
                     this.pl(desktop::titlebar_content_start(window))
                 }
-                #[cfg(not(target_os = "macos"))]
+                #[cfg(target_os = "windows")]
                 {
                     this
                 }

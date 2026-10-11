@@ -132,7 +132,6 @@ fn fullscreen_shortcut_uses_the_platform_primary_modifier() {
     assert_ne!(shortcut, COLOR_PICKER_SHORTCUT);
 }
 
-#[cfg(not(target_os = "linux"))]
 #[test]
 fn fullscreen_shortcut_registration_failure_preserves_other_shortcuts_and_can_retry() {
     use super::settings::{ShortcutBackend, ShortcutService};

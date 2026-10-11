@@ -2,9 +2,6 @@ mod color;
 mod controller;
 mod overlay;
 mod placement;
-#[cfg(target_os = "linux")]
-#[path = "linux.rs"]
-mod platform;
 mod selection;
 
 #[cfg(target_os = "macos")]
@@ -18,7 +15,6 @@ use crate::dimensions::PixelScale;
 use image::RgbaImage;
 use std::sync::Arc;
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use controller::open_editor;
 pub(crate) use controller::remember_editor;
 pub use controller::{
@@ -28,7 +24,6 @@ pub use controller::{
 pub(crate) use placement::CapturePlacement;
 #[cfg(target_os = "windows")]
 pub use platform::initialize;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use platform::set_window_visible;
 pub use platform::{has_permission, open_permission_settings, request_permission, restart};
 

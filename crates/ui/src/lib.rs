@@ -1,6 +1,3 @@
-// TODO: Revisit Linux client-side decorations when needed: desktops without server-side
-// decorations currently have no custom border, shadow, or edge-resize handles.
-
 mod assets;
 mod button;
 mod color_picker;

@@ -1,6 +1,3 @@
-#[cfg(target_os = "linux")]
-#[path = "linux.rs"]
-mod platform;
 #[cfg(target_os = "macos")]
 #[path = "macos.rs"]
 mod platform;

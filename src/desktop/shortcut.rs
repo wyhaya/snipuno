@@ -42,7 +42,6 @@ pub const COLOR_PICKER_SHORTCUT: Shortcut = Shortcut {
 };
 
 impl Shortcut {
-    #[cfg(not(target_os = "linux"))]
     pub fn keystroke(&self) -> String {
         let m = self.modifiers;
         let key = self
