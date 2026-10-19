@@ -60,9 +60,12 @@ jobs:
           key: ${{ matrix.job.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: setup cargo binstall
-        uses: cargo-bins/cargo-binstall@main
+        # v1.26.0
+        uses: cargo-bins/cargo-binstall@8a2045612414e945291083f820cd50b4d8fc2218
 
       - name: install deps
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cargo binstall --disable-telemetry --force --no-confirm cargo-packager@0.11.8
           cargo binstall --disable-telemetry --force --no-confirm lq@0.16.0
