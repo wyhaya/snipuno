@@ -107,7 +107,6 @@ pub enum Tool {
     Rectangle,
     RectangleFill,
     Ellipse,
-    EllipseFill,
     Arrow,
     Line(LineStyle),
     Brush,
@@ -123,14 +122,11 @@ pub enum Tool {
 
 impl Tool {
     pub fn is_shape(self) -> bool {
-        matches!(
-            self,
-            Self::Rectangle | Self::RectangleFill | Self::Ellipse | Self::EllipseFill
-        )
+        matches!(self, Self::Rectangle | Self::RectangleFill | Self::Ellipse)
     }
 
     pub fn is_filled_shape(self) -> bool {
-        matches!(self, Self::RectangleFill | Self::EllipseFill)
+        matches!(self, Self::RectangleFill)
     }
 
     pub fn has_auto_color(self) -> bool {
@@ -139,15 +135,17 @@ impl Tool {
 
     pub fn family(self) -> Self {
         match self {
-            Self::RectangleFill => Self::Rectangle,
-            Self::EllipseFill => Self::Ellipse,
+            tool if tool.is_redaction() => Self::Redact(RedactionStyle::default()),
             Self::Number(_) => Self::Number(0),
             Self::Guide(_) => Self::Measure(MeasurementAxis::Y),
             Self::Measure(_) => Self::Measure(MeasurementAxis::Y),
             Self::Line(_) => Self::Line(LineStyle::Solid),
-            Self::Redact(_) => Self::Redact(RedactionStyle::default()),
             _ => self,
         }
+    }
+
+    pub fn is_redaction(self) -> bool {
+        matches!(self, Self::Redact(_) | Self::RectangleFill)
     }
 
     pub fn is_obscuring(self) -> bool {
@@ -171,7 +169,6 @@ impl Tool {
             Self::Rectangle
                 | Self::RectangleFill
                 | Self::Ellipse
-                | Self::EllipseFill
                 | Self::Arrow
                 | Self::Line(_)
                 | Self::Brush
@@ -181,16 +178,16 @@ impl Tool {
     }
 
     pub fn has_style_cycle(self) -> bool {
-        matches!(
-            self,
-            Self::Arrow
-                | Self::Line(_)
-                | Self::Redact(_)
-                | Self::Text
-                | Self::Number(_)
-                | Self::Measure(_)
-                | Self::Guide(_)
-        )
+        self.is_redaction()
+            || matches!(
+                self,
+                Self::Arrow
+                    | Self::Line(_)
+                    | Self::Text
+                    | Self::Number(_)
+                    | Self::Measure(_)
+                    | Self::Guide(_)
+            )
     }
 
     pub fn is_stamp(self) -> bool {
@@ -589,7 +586,7 @@ impl Stroke {
                     && point.y >= bounds.y - tolerance
                     && point.y <= bounds.y + bounds.height + tolerance
             }
-            Tool::Ellipse | Tool::EllipseFill | Tool::Number(_) | Tool::Magnifier => {
+            Tool::Ellipse | Tool::Number(_) | Tool::Magnifier => {
                 let rx = bounds.width / 2.0 + tolerance;
                 let ry = bounds.height / 2.0 + tolerance;
                 ((point.x - bounds.x - bounds.width / 2.0) / rx).powi(2)
@@ -631,7 +628,6 @@ impl Stroke {
             | Tool::Magnifier
             | Tool::Text
             | Tool::Ellipse
-            | Tool::EllipseFill
             | Tool::Image(_)
             | Tool::Number(_)
             | Tool::Redact(_) => {

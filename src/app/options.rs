@@ -72,16 +72,16 @@ impl ScreenshotEditor {
         cx.notify();
     }
 
-    pub(super) fn set_redaction_style(
+    pub(super) fn set_redaction_tool(
         &mut self,
-        style: RedactionStyle,
+        tool: Tool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.preferences.redaction_style.set(style);
-        self.editor.set_redaction_style(style);
-        if self.tool.is_some_and(Tool::is_obscuring) {
-            self.tool = Some(Tool::Redact(style));
+        self.preferences.redaction_tool.set(tool);
+        self.editor.set_redaction_tool(tool);
+        if self.tool.is_some_and(Tool::is_redaction) {
+            self.tool = Some(tool);
         }
         self.focus.focus(window, cx);
         cx.notify();
@@ -124,13 +124,17 @@ impl ScreenshotEditor {
                 );
                 self.set_line_style(next, window, cx);
             }
-            Tool::Redact(style) => {
+            Tool::Redact(_) | Tool::RectangleFill => {
                 let next = cycle_option(
-                    &[RedactionStyle::Blur, RedactionStyle::Mosaic],
-                    style,
+                    &[
+                        Tool::Redact(RedactionStyle::Blur),
+                        Tool::Redact(RedactionStyle::Mosaic),
+                        Tool::RectangleFill,
+                    ],
+                    tool,
                     reverse,
                 );
-                self.set_redaction_style(next, window, cx);
+                self.set_redaction_tool(next, window, cx);
             }
             Tool::Number(_) => {
                 let tail = selected.map_or(self.preferences.number_tail.get(), |s| s.number_tail);

@@ -45,7 +45,6 @@ fn constrained_shapes_remain_square_at_every_image_edge() {
         Tool::Rectangle,
         Tool::RectangleFill,
         Tool::Ellipse,
-        Tool::EllipseFill,
         Tool::Magnifier,
     ] {
         for target in [

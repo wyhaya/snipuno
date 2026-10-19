@@ -180,7 +180,6 @@ impl Editor {
                     | Tool::Spotlight
                     | Tool::Magnifier
                     | Tool::Ellipse
-                    | Tool::EllipseFill
                     | Tool::Redact(_)
             )
         {

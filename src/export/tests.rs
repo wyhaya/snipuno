@@ -93,11 +93,11 @@ fn partially_visible_layers_export_as_a_crop_of_the_complete_layer() {
     ]
     .map(|tool| stroke(tool, bounds(0.0, 0.0, 40.0, 30.0)))
     .to_vec();
-    for tool in [Tool::RectangleFill, Tool::EllipseFill] {
-        for color in [None, Some(0xff123456)] {
-            layers.push(filled_shape(tool, bounds(0.0, 0.0, 40.0, 30.0), color));
-        }
+    let tool = Tool::RectangleFill;
+    for color in [None, Some(0xff123456)] {
+        layers.push(filled_shape(tool, bounds(0.0, 0.0, 40.0, 30.0), color));
     }
+
     for layer in layers {
         let tool = layer.tool;
         for (x, y) in [(20.0, 40.0), (100.0, 40.0), (60.0, 15.0), (60.0, 75.0)] {
@@ -147,7 +147,7 @@ fn fully_off_canvas_layers_leave_export_pixels_unchanged() {
             ),
             filled_shape(Tool::RectangleFill, bounds(100.0, 10.0, 40.0, 30.0), None),
             filled_shape(
-                Tool::EllipseFill,
+                Tool::RectangleFill,
                 bounds(100.0, 10.0, 40.0, 30.0),
                 Some(0xff123456),
             ),
@@ -275,11 +275,11 @@ fn spotlight_leaves_annotation_layers_undimmed_regardless_of_creation_order() {
     ]
     .map(|tool| stroke(tool, bounds(10.0, 20.0, 70.0, 60.0)))
     .to_vec();
-    for tool in [Tool::RectangleFill, Tool::EllipseFill] {
-        for color in [None, Some(0xff123456)] {
-            layers.push(filled_shape(tool, bounds(10.0, 20.0, 70.0, 60.0), color));
-        }
+    let tool = Tool::RectangleFill;
+    for color in [None, Some(0xff123456)] {
+        layers.push(filled_shape(tool, bounds(10.0, 20.0, 70.0, 60.0), color));
     }
+
     for mut mark in layers {
         let tool = mark.tool;
         if tool == Tool::Magnifier {
@@ -398,46 +398,40 @@ fn magnifier_samples_original_pixels_at_its_center_with_crop_offset_and_round_ma
 }
 
 #[test]
-fn filled_shapes_export_solid_and_background_colors_with_shape_masks_after_crop() {
-    for tool in [Tool::RectangleFill, Tool::EllipseFill] {
-        for color in [None, Some(0xff123456)] {
-            let source = RgbaImage::from_fn(80, 40, |x, y| {
-                Rgba(
-                    if (30..50).contains(&x) && (12..20).contains(&y) && x % 4 == 0 {
-                        [240, 20, 20, 255]
-                    } else {
-                        [31, 36, 40, 255]
-                    },
-                )
-            });
-            let mut mark = filled_shape(tool, bounds(10.0, 10.0, 20.0, 20.0), color);
-            mark.color = 0xff00ff00;
-            mark.width = 15.0;
-            let mut image = snapshot(source.clone(), vec![mark]);
-            image.bounds = bounds(20.0, 0.0, 40.0, 40.0);
-            for scale in [0.5, 1.0, 2.0] {
-                image.scale = scale;
-                let output = render(image.clone());
-                let fill = if color.is_none() {
-                    [31, 36, 40, 255]
+fn filled_rectangles_export_solid_and_background_colors_after_crop() {
+    let tool = Tool::RectangleFill;
+    for color in [None, Some(0xff123456)] {
+        let source = RgbaImage::from_fn(80, 40, |x, y| {
+            Rgba(
+                if (30..50).contains(&x) && (12..20).contains(&y) && x % 4 == 0 {
+                    [240, 20, 20, 255]
                 } else {
-                    [18, 52, 86, 255]
-                };
-                for (x, y) in [(20, 20), (15, 20), (25, 20), (20, 15), (20, 25)] {
-                    assert_eq!(
-                        *output.get_pixel(x, y),
-                        Rgba(fill),
-                        "{tool:?} {color:?} {scale}"
-                    );
-                }
-                for (x, y) in [(8, 20), (31, 20), (20, 8), (20, 31)] {
-                    assert_eq!(*output.get_pixel(x, y), *source.get_pixel(x + 20, y));
-                }
-                if tool == Tool::EllipseFill {
-                    for (x, y) in [(11, 11), (28, 11), (11, 28), (28, 28)] {
-                        assert_eq!(*output.get_pixel(x, y), *source.get_pixel(x + 20, y));
-                    }
-                }
+                    [31, 36, 40, 255]
+                },
+            )
+        });
+        let mut mark = filled_shape(tool, bounds(10.0, 10.0, 20.0, 20.0), color);
+        mark.color = 0xff00ff00;
+        mark.width = 15.0;
+        let mut image = snapshot(source.clone(), vec![mark]);
+        image.bounds = bounds(20.0, 0.0, 40.0, 40.0);
+        for scale in [0.5, 1.0, 2.0] {
+            image.scale = scale;
+            let output = render(image.clone());
+            let fill = if color.is_none() {
+                [31, 36, 40, 255]
+            } else {
+                [18, 52, 86, 255]
+            };
+            for (x, y) in [(20, 20), (15, 20), (25, 20), (20, 15), (20, 25)] {
+                assert_eq!(
+                    *output.get_pixel(x, y),
+                    Rgba(fill),
+                    "{tool:?} {color:?} {scale}"
+                );
+            }
+            for (x, y) in [(8, 20), (31, 20), (20, 8), (20, 31)] {
+                assert_eq!(*output.get_pixel(x, y), *source.get_pixel(x + 20, y));
             }
         }
     }
@@ -489,28 +483,27 @@ fn automatic_brush_erases_along_its_path_after_crop_at_each_display_scale() {
 
 #[test]
 fn fill_opacity_is_applied_once_across_the_interior() {
-    for tool in [Tool::RectangleFill, Tool::EllipseFill] {
-        for opacity in [0.2, 0.5, 1.0] {
-            let mut shape = filled_shape(tool, bounds(5.0, 5.0, 30.0, 30.0), Some(0xffe02040));
-            shape.fill_opacity = opacity;
-            let image = snapshot(
-                RgbaImage::from_pixel(40, 40, Rgba([255; 4])),
-                vec![shape.clone()],
-            );
-            let output = render(image);
-            let center = output.get_pixel(20, 20);
-            for y in 12..28 {
-                for x in 12..28 {
-                    assert_eq!(output.get_pixel(x, y), center);
-                }
+    let tool = Tool::RectangleFill;
+    for opacity in [0.2, 0.5, 1.0] {
+        let mut shape = filled_shape(tool, bounds(5.0, 5.0, 30.0, 30.0), Some(0xffe02040));
+        shape.fill_opacity = opacity;
+        let image = snapshot(
+            RgbaImage::from_pixel(40, 40, Rgba([255; 4])),
+            vec![shape.clone()],
+        );
+        let output = render(image);
+        let center = output.get_pixel(20, 20);
+        for y in 12..28 {
+            for x in 12..28 {
+                assert_eq!(output.get_pixel(x, y), center);
             }
-            assert_eq!(*output.get_pixel(0, 0), Rgba([255; 4]));
-            let transparent = render(snapshot(RgbaImage::new(40, 40), vec![shape]));
-            assert_eq!(
-                transparent.get_pixel(20, 20)[3],
-                (opacity * 255.0).round() as u8
-            );
         }
+        assert_eq!(*output.get_pixel(0, 0), Rgba([255; 4]));
+        let transparent = render(snapshot(RgbaImage::new(40, 40), vec![shape]));
+        assert_eq!(
+            transparent.get_pixel(20, 20)[3],
+            (opacity * 255.0).round() as u8
+        );
     }
 }
 
@@ -523,32 +516,30 @@ fn automatic_and_solid_fill_opacity_blend_original_pixels_at_each_step() {
             [250, 250, 250, 255]
         })
     });
-    for tool in [Tool::RectangleFill, Tool::EllipseFill] {
-        for color in [None, Some(0xff0c78c8)] {
-            for step in 0..=10 {
-                let opacity = step as f32 / 10.0;
-                let mut shape = filled_shape(tool, bounds(5.0, 5.0, 30.0, 30.0), color);
-                shape.color = 0;
-                shape.fill_opacity = opacity;
-                let output = render(snapshot(source.clone(), vec![shape]));
-                let fill = if color.is_none() {
-                    [250, 250, 250]
-                } else {
-                    [12, 120, 200]
-                };
-                let alpha = (opacity * 255.0).round() / 255.0;
-                for (channel, base) in [80.0, 40.0, 20.0].into_iter().enumerate() {
-                    let expected =
-                        (base * (1.0 - alpha) + fill[channel] as f32 * alpha).round() as u8;
-                    assert!(
-                        output.get_pixel(20, 20)[channel].abs_diff(expected) <= 1,
-                        "{tool:?} {color:?} {step}: {:?}",
-                        output.get_pixel(20, 20)
-                    );
-                }
-                assert_eq!(output.get_pixel(20, 20)[3], 255);
-                assert_eq!(output.get_pixel(0, 0), source.get_pixel(0, 0));
+    let tool = Tool::RectangleFill;
+    for color in [None, Some(0xff0c78c8)] {
+        for step in 0..=10 {
+            let opacity = step as f32 / 10.0;
+            let mut shape = filled_shape(tool, bounds(5.0, 5.0, 30.0, 30.0), color);
+            shape.color = 0;
+            shape.fill_opacity = opacity;
+            let output = render(snapshot(source.clone(), vec![shape]));
+            let fill = if color.is_none() {
+                [250, 250, 250]
+            } else {
+                [12, 120, 200]
+            };
+            let alpha = (opacity * 255.0).round() / 255.0;
+            for (channel, base) in [80.0, 40.0, 20.0].into_iter().enumerate() {
+                let expected = (base * (1.0 - alpha) + fill[channel] as f32 * alpha).round() as u8;
+                assert!(
+                    output.get_pixel(20, 20)[channel].abs_diff(expected) <= 1,
+                    "{tool:?} {color:?} {step}: {:?}",
+                    output.get_pixel(20, 20)
+                );
             }
+            assert_eq!(output.get_pixel(20, 20)[3], 255);
+            assert_eq!(output.get_pixel(0, 0), source.get_pixel(0, 0));
         }
     }
 }

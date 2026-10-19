@@ -161,7 +161,7 @@ impl ExportImage {
         for (index, stroke) in self.strokes.iter().enumerate() {
             let bounds = stroke.bounds();
             match stroke.tool {
-                Tool::RectangleFill | Tool::EllipseFill if stroke.fill_color.is_none() => {
+                Tool::RectangleFill if stroke.fill_color.is_none() => {
                     if let Some(color) = background_color(&self.source, bounds, offset)
                         && let Some(path) = stroke_path(stroke, viewport)
                     {

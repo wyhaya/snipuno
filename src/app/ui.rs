@@ -71,14 +71,8 @@ impl ScreenshotEditor {
             Tool::Rectangle => ToolTooltip::new(label)
                 .description("Drag to draw a rectangular outline.")
                 .hint("Keep square", [SHIFT]),
-            Tool::RectangleFill => ToolTooltip::new(label)
-                .description("Drag to fill a rectangular area with a color.")
-                .hint("Keep square", [SHIFT]),
             Tool::Ellipse => ToolTooltip::new(label)
                 .description("Drag to draw an oval or circle.")
-                .hint("Keep circular", [SHIFT]),
-            Tool::EllipseFill => ToolTooltip::new(label)
-                .description("Drag to fill an oval or circle with a color.")
                 .hint("Keep circular", [SHIFT]),
             Tool::Arrow => ToolTooltip::new(label)
                 .description("Point to a detail. Drag the middle handle to bend the arrow."),
@@ -102,8 +96,8 @@ impl ScreenshotEditor {
                     "Click to measure detected edges, or drag along the chosen direction. Red guides can also be clicked or dragged. Press V to select and move measurements or guides.",
                 )
                 .hint("Exit tool", ["V", "or", "Esc"]),
-            Tool::Redact(_) => ToolTooltip::new(label)
-                .description("Cover an area using blur or mosaic."),
+            Tool::Redact(_) | Tool::RectangleFill => ToolTooltip::new(label)
+                .description("Cover an area using blur, mosaic or a filled rectangle."),
             Tool::Spotlight => ToolTooltip::new(label)
                 .description("Keep an area bright and dim the rest of the image."),
             _ => ToolTooltip::new(label),
@@ -130,67 +124,6 @@ impl ScreenshotEditor {
             .tool_tooltip(tooltip.shortcut([shortcut]))
             .on_click(
                 cx.listener(move |this, _, window, cx| this.choose_tool(Some(tool), window, cx)),
-            )
-    }
-
-    fn shape_tool_button(&self, base: Tool, cx: &mut Context<Self>) -> impl IntoElement {
-        let (group_id, menu_id, trigger_id, menu_label, shortcut, variants) =
-            if base == Tool::Rectangle {
-                (
-                    "rectangle-tools",
-                    "rectangle-tool-options",
-                    "rectangle-tool-options-trigger",
-                    "Rectangle options",
-                    "R",
-                    [
-                        (Tool::Rectangle, "Rectangle", Icon::Square),
-                        (Tool::RectangleFill, "Filled rectangle", Icon::SquareFilled),
-                    ],
-                )
-            } else {
-                (
-                    "ellipse-tools",
-                    "ellipse-tool-options",
-                    "ellipse-tool-options-trigger",
-                    "Ellipse options",
-                    "O",
-                    [
-                        (Tool::Ellipse, "Ellipse", Icon::Circle),
-                        (Tool::EllipseFill, "Filled ellipse", Icon::CircleFilled),
-                    ],
-                )
-            };
-        let tool = self.preferences.shape_tool(base);
-        let (_, label, icon) = variants[usize::from(tool.is_filled_shape())];
-        let tooltip = variants.into_iter().fold(
-            ToolTooltip::new(menu_label),
-            |tooltip, (variant, label, _)| {
-                tooltip.hint(label, (tool == variant).then_some(shortcut))
-            },
-        );
-        ToolbarGroup::new(group_id)
-            .label(menu_label)
-            .gap(px(TOOLBAR_GAP))
-            .child(self.tool_button(tool, label, icon, shortcut, cx))
-            .child(
-                Dropdown::new(
-                    menu_id,
-                    Button::icon(trigger_id, Icon::ChevronDown)
-                        .w_5()
-                        .accessibility_label(menu_label)
-                        .tool_tooltip(tooltip),
-                )
-                .menu_label(menu_label)
-                .items(variants.map(|(variant, label, icon)| {
-                    Button::new(label)
-                        .ghost()
-                        .selected(tool == variant)
-                        .child(icon)
-                        .label(label)
-                        .on_click(cx.listener(move |this, _, window, cx| {
-                            this.choose_tool(Some(variant), window, cx);
-                        }))
-                })),
             )
     }
 
@@ -284,39 +217,35 @@ impl ScreenshotEditor {
                     )
                 },
             )
-            .when_some(
-                match tool {
-                    Tool::Redact(style) => Some(style),
-                    _ => None,
-                },
-                |this, style| {
-                    this.child(
-                        SegmentedControl::new("redaction-style", style)
-                            .accessibility_label("Redaction style")
-                            .items(
-                                [
-                                    (RedactionStyle::Blur, Icon::Blur, "Blur"),
-                                    (RedactionStyle::Mosaic, Icon::Mosaic, "Mosaic"),
-                                ]
-                                .into_iter()
-                                .map(|(style, icon, label)| {
-                                    Segment::icon(style, icon, format!("Redact with {label}"))
-                                        .tooltip(style_tooltip(ToolTooltip::new(label).description(match style {
-                                            RedactionStyle::Blur => {
-                                                "Soften details inside the marked area."
-                                            }
-                                            RedactionStyle::Mosaic => {
-                                                "Pixelate the marked area into color blocks."
-                                            }
-                                        })))
-                                }),
-                            )
-                            .on_change(cx.listener(|this, style: &RedactionStyle, window, cx| {
-                                this.set_redaction_style(*style, window, cx);
-                            })),
-                    )
-                },
-            )
+            .when(tool.is_redaction(), |this| {
+                this.child(
+                    SegmentedControl::new("redaction-style", tool)
+                        .accessibility_label("Redaction style")
+                        .items(
+                            [
+                                (Tool::Redact(RedactionStyle::Blur), Icon::Blur, "Blur"),
+                                (Tool::Redact(RedactionStyle::Mosaic), Icon::Mosaic, "Mosaic"),
+                                (Tool::RectangleFill, Icon::SquareFilled, "Filled rectangle"),
+                            ]
+                            .into_iter()
+                            .map(|(tool, icon, label)| {
+                                Segment::icon(tool, icon, format!("Redact with {label}"))
+                                    .tooltip(style_tooltip(ToolTooltip::new(label).description(match tool {
+                                        Tool::Redact(RedactionStyle::Blur) => {
+                                            "Soften details inside the marked area."
+                                        }
+                                        Tool::Redact(RedactionStyle::Mosaic) => {
+                                            "Pixelate the marked area into color blocks."
+                                        }
+                                        _ => "Fill a rectangular area with a color.",
+                                    })))
+                            }),
+                        )
+                        .on_change(cx.listener(|this, tool: &Tool, window, cx| {
+                            this.set_redaction_tool(*tool, window, cx);
+                        })),
+                )
+            })
             .when(tool.has_color(), |this| {
                 this.child(
                     div()
@@ -577,8 +506,8 @@ impl ScreenshotEditor {
                                 this.choose_tool(None, window, cx)
                             })),
                     )
-                    .child(self.shape_tool_button(Tool::Rectangle, cx))
-                    .child(self.shape_tool_button(Tool::Ellipse, cx))
+                    .child(self.tool_button(Tool::Rectangle, "Rectangle", Icon::Square, "R", cx))
+                    .child(self.tool_button(Tool::Ellipse, "Ellipse", Icon::Circle, "O", cx))
                     .child(self.tool_button(Tool::Arrow, "Arrow", Icon::ArrowUpRight, "A", cx))
                     .child(self.tool_button(
                         Tool::Line(LineStyle::Solid),
@@ -597,7 +526,7 @@ impl ScreenshotEditor {
                         cx,
                     ))
                     .child(self.tool_button(
-                        Tool::Redact(self.preferences.redaction_style.get()),
+                        self.preferences.redaction_tool.get(),
                         "Redact",
                         Icon::Eraser,
                         "E",

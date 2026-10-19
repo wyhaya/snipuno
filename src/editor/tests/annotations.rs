@@ -169,37 +169,77 @@ fn text_edits_keep_content_and_position_and_reject_invalid_input() {
 #[test]
 fn redaction_changes_keep_region_and_are_individually_undoable() {
     let mut editor = selected_editor(Tool::Redact(RedactionStyle::Blur));
-    for style in [RedactionStyle::Mosaic, RedactionStyle::Blur] {
+    editor.strokes[0].fill_color = Some(0xff123456);
+    editor.strokes[0].fill_opacity = 0.4;
+    editor.strokes[0].effect_strength = EffectStrength::Max;
+    for tool in [
+        Tool::Redact(RedactionStyle::Mosaic),
+        Tool::RectangleFill,
+        Tool::Redact(RedactionStyle::Blur),
+    ] {
+        assert!(tool.is_redaction());
+        assert_eq!(tool.family(), Tool::Redact(RedactionStyle::default()));
+        assert!(tool.has_style_cycle());
         let before = editor.strokes().to_vec();
-        assert!(editor.set_redaction_style(style));
-        assert_eq!(editor.selected().unwrap().bounds(), before[0].bounds());
-        assert_eq!(editor.selected().unwrap().tool, Tool::Redact(style));
+        assert!(editor.set_redaction_tool(tool));
+        let mut expected = before[0].clone();
+        expected.tool = tool;
+        assert_eq!(editor.selected().unwrap(), &expected);
         assert_reversible(&mut editor, &before);
     }
+    let before = editor.strokes().to_vec();
+    let revision = editor.history_revision();
+    for tool in [Tool::Rectangle, Tool::Ellipse, Tool::Brush] {
+        assert!(!editor.set_redaction_tool(tool));
+        assert_eq!(editor.strokes(), before);
+        assert_eq!(editor.history_revision(), revision);
+        let mut ordinary = selected_editor(tool);
+        let original = ordinary.strokes().to_vec();
+        assert!(!ordinary.set_redaction_tool(Tool::RectangleFill));
+        assert_eq!(ordinary.strokes(), original);
+    }
+
+    let mut draft = Editor::new(100.0, 100.0);
+    draft.begin(Tool::RectangleFill, Point::new(10.0, 10.0), 0xffabcdef, 5.0);
+    draft.draft.as_mut().unwrap().fill_color = Some(0xff123456);
+    draft.draft.as_mut().unwrap().fill_opacity = 0.4;
+    for tool in [
+        Tool::Redact(RedactionStyle::Blur),
+        Tool::Redact(RedactionStyle::Mosaic),
+        Tool::RectangleFill,
+    ] {
+        let mut expected = draft.draft().unwrap().clone();
+        expected.tool = tool;
+        assert!(draft.set_redaction_tool(tool));
+        assert_eq!(draft.draft().unwrap(), &expected);
+    }
+    let original = draft.draft().unwrap().clone();
+    assert!(!draft.set_redaction_tool(Tool::Ellipse));
+    assert_eq!(draft.draft().unwrap(), &original);
 }
 
 #[test]
 fn fill_color_changes_preserve_shape_and_are_undoable() {
-    for tool in [Tool::RectangleFill, Tool::EllipseFill] {
-        let mut editor = selected_editor(tool);
-        let shape = editor.selected().unwrap().clone();
-        assert!(shape.is_filled_shape());
-        assert_eq!(shape.fill_color, None);
-        for color in [Some(0xff123456), None] {
-            let before = editor.strokes().to_vec();
-            assert!(editor.set_fill_color(color));
-            assert_reversible(&mut editor, &before);
-            assert!(!editor.selected().unwrap().tool.has_width());
-            assert!(!editor.set_selected_width(9.0));
-            assert!(!editor.set_selected_color(0xffabcdef));
-            let changed = editor.selected().unwrap();
-            assert_eq!(changed.tool, shape.tool);
-            assert_eq!(changed.color, shape.color);
-            assert_eq!(changed.width, shape.width);
-            assert_eq!(changed.bounds(), shape.bounds());
-            assert_eq!(changed.fill_color, color);
-        }
+    let tool = Tool::RectangleFill;
+    let mut editor = selected_editor(tool);
+    let shape = editor.selected().unwrap().clone();
+    assert!(shape.is_filled_shape());
+    assert_eq!(shape.fill_color, None);
+    for color in [Some(0xff123456), None] {
+        let before = editor.strokes().to_vec();
+        assert!(editor.set_fill_color(color));
+        assert_reversible(&mut editor, &before);
+        assert!(!editor.selected().unwrap().tool.has_width());
+        assert!(!editor.set_selected_width(9.0));
+        assert!(!editor.set_selected_color(0xffabcdef));
+        let changed = editor.selected().unwrap();
+        assert_eq!(changed.tool, shape.tool);
+        assert_eq!(changed.color, shape.color);
+        assert_eq!(changed.width, shape.width);
+        assert_eq!(changed.bounds(), shape.bounds());
+        assert_eq!(changed.fill_color, color);
     }
+
     for tool in [Tool::Rectangle, Tool::Ellipse, Tool::Arrow, Tool::Brush] {
         let mut editor = selected_editor(tool);
         let before = editor.strokes().to_vec();
@@ -209,49 +249,48 @@ fn fill_color_changes_preserve_shape_and_are_undoable() {
 }
 
 #[test]
-fn filled_shapes_default_to_auto_and_preserve_constrained_size_and_move() {
-    for tool in [Tool::RectangleFill, Tool::EllipseFill] {
-        let mut editor = Editor::new(100.0, 100.0);
-        editor.begin(tool, Point::new(10.0, 10.0), 0xffabcdef, 5.0);
-        assert_eq!(editor.draft().unwrap().fill_color, None);
-        assert_eq!(editor.draft().unwrap().fill_opacity, 1.0);
-        assert!(editor.finish_constrained(Point::new(50.0, 35.0), 1.0, true));
-        let filled = editor.selected().unwrap().clone();
-        assert_eq!(filled.bounds(), bounds(10.0, 10.0, 40.0, 40.0));
-        assert_eq!(filled.paint_bounds(1.0), filled.bounds());
-        editor.begin_move(Point::new(30.0, 30.0), 1.0);
-        assert!(editor.is_dragging());
-        assert!(editor.finish(Point::new(40.0, 40.0), 1.0));
-        assert_eq!(
-            editor.selected().unwrap().bounds(),
-            bounds(20.0, 20.0, 40.0, 40.0)
-        );
-        assert_eq!(editor.selected().unwrap().fill_color, None);
-        assert!(editor.undo());
-        assert_eq!(editor.selected().unwrap(), &filled);
-    }
+fn filled_rectangles_default_to_auto_and_preserve_constrained_size_and_move() {
+    let tool = Tool::RectangleFill;
+    let mut editor = Editor::new(100.0, 100.0);
+    editor.begin(tool, Point::new(10.0, 10.0), 0xffabcdef, 5.0);
+    assert_eq!(editor.draft().unwrap().fill_color, None);
+    assert_eq!(editor.draft().unwrap().fill_opacity, 1.0);
+    assert!(editor.finish_constrained(Point::new(50.0, 35.0), 1.0, true));
+    let filled = editor.selected().unwrap().clone();
+    assert_eq!(filled.bounds(), bounds(10.0, 10.0, 40.0, 40.0));
+    assert_eq!(filled.paint_bounds(1.0), filled.bounds());
+    editor.begin_move(Point::new(30.0, 30.0), 1.0);
+    assert!(editor.is_dragging());
+    assert!(editor.finish(Point::new(40.0, 40.0), 1.0));
+    assert_eq!(
+        editor.selected().unwrap().bounds(),
+        bounds(20.0, 20.0, 40.0, 40.0)
+    );
+    assert_eq!(editor.selected().unwrap().fill_color, None);
+    assert!(editor.undo());
+    assert_eq!(editor.selected().unwrap(), &filled);
 }
 
 #[test]
 fn fill_opacity_edits_validate_values_and_preserve_other_properties() {
-    for tool in [Tool::RectangleFill, Tool::EllipseFill] {
-        let mut editor = selected_editor(tool);
-        let original = editor.selected().unwrap().clone();
-        for opacity in [0.2, 0.5, 0.0, 1.0] {
-            let before = editor.strokes().to_vec();
-            assert!(editor.set_fill_opacity(opacity));
-            let mut expected = original.clone();
-            expected.fill_opacity = opacity;
-            assert_eq!(editor.selected().unwrap(), &expected);
-            assert_reversible(&mut editor, &before);
-        }
+    let tool = Tool::RectangleFill;
+    let mut editor = selected_editor(tool);
+    let original = editor.selected().unwrap().clone();
+    for opacity in [0.2, 0.5, 0.0, 1.0] {
         let before = editor.strokes().to_vec();
-        for opacity in [-0.1, 1.1, f32::NAN, f32::INFINITY] {
-            assert!(!editor.set_fill_opacity(opacity));
-            editor.preview_fill_opacity(opacity);
-            assert_eq!(editor.strokes(), before);
-        }
+        assert!(editor.set_fill_opacity(opacity));
+        let mut expected = original.clone();
+        expected.fill_opacity = opacity;
+        assert_eq!(editor.selected().unwrap(), &expected);
+        assert_reversible(&mut editor, &before);
     }
+    let before = editor.strokes().to_vec();
+    for opacity in [-0.1, 1.1, f32::NAN, f32::INFINITY] {
+        assert!(!editor.set_fill_opacity(opacity));
+        editor.preview_fill_opacity(opacity);
+        assert_eq!(editor.strokes(), before);
+    }
+
     for tool in [Tool::Rectangle, Tool::Ellipse, Tool::Arrow, Tool::Brush] {
         let mut editor = selected_editor(tool);
         let before = editor.strokes().to_vec();
@@ -627,7 +666,6 @@ fn hovered_strength_and_opacity_changes_preserve_other_properties_and_are_undoab
         Tool::Redact(RedactionStyle::Blur),
         Tool::Redact(RedactionStyle::Mosaic),
         Tool::RectangleFill,
-        Tool::EllipseFill,
     ] {
         let mut editor = selected_editor(tool);
         draw(

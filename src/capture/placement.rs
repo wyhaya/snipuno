@@ -6,9 +6,9 @@ use crate::{canvas::ImageViewport, theme};
 use gpui::{Bounds, Pixels, Point, Size, point, px, size};
 
 #[cfg(target_os = "macos")]
-pub const MIN_EDITOR_WIDTH: f32 = 960.0;
+pub const MIN_EDITOR_WIDTH: f32 = 918.0;
 #[cfg(target_os = "windows")]
-pub const MIN_EDITOR_WIDTH: f32 = 1000.0;
+pub const MIN_EDITOR_WIDTH: f32 = 958.0;
 
 // Toolbar + gap + options panel + gap = 44 + 12 + (32 + 6 * 2 + 1 * 2) + 12 = 114 px.
 // The two gaps keep equal space above and below the options panel.

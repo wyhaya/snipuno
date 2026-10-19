@@ -70,18 +70,21 @@ impl Editor {
         self.set_magnifier_zoom(zoom);
     }
 
-    pub fn set_redaction_style(&mut self, style: RedactionStyle) -> bool {
+    pub fn set_redaction_tool(&mut self, tool: Tool) -> bool {
+        if !tool.is_redaction() {
+            return false;
+        }
         if let Some(draft) = self
             .draft
             .as_mut()
-            .filter(|stroke| stroke.tool.is_obscuring())
+            .filter(|stroke| stroke.tool.is_redaction())
         {
-            draft.tool = Tool::Redact(style);
+            draft.tool = tool;
             return true;
         }
         self.change_selected(|stroke| {
-            if stroke.tool.is_obscuring() {
-                stroke.tool = Tool::Redact(style);
+            if stroke.tool.is_redaction() {
+                stroke.tool = tool;
             }
         })
     }

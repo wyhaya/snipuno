@@ -799,10 +799,7 @@ pub fn paint_hover(stroke: &Stroke, viewport: ImageViewport, window: &mut Window
                 }
                 return;
             }
-            let shape_path = if matches!(
-                stroke.tool,
-                Tool::Ellipse | Tool::EllipseFill | Tool::Magnifier
-            ) {
+            let shape_path = if matches!(stroke.tool, Tool::Ellipse | Tool::Magnifier) {
                 ellipse_path
             } else {
                 rectangle_path
@@ -950,7 +947,6 @@ fn stroke_path_with_width(
         | Tool::RectangleFill
         | Tool::Magnifier
         | Tool::Ellipse
-        | Tool::EllipseFill
         | Tool::Number(_) => bounds.width <= 0.0 || bounds.height <= 0.0,
         Tool::Arrow | Tool::Line(_) | Tool::Guide(_) | Tool::Measure(_) => {
             (stroke.end.x - stroke.start.x).hypot(stroke.end.y - stroke.start.y) <= f32::EPSILON
@@ -1012,12 +1008,8 @@ fn stroke_path_with_width(
             );
         }
         Tool::Number(_) => return number_path(stroke, viewport, None),
-        Tool::Ellipse | Tool::EllipseFill | Tool::Magnifier => {
-            return ellipse_path(
-                bounds,
-                viewport,
-                (!stroke.is_filled_shape()).then_some(width),
-            );
+        Tool::Ellipse | Tool::Magnifier => {
+            return ellipse_path(bounds, viewport, Some(width));
         }
         Tool::Arrow => {
             let arrow = stroke.arrow_geometry();

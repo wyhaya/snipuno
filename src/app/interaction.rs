@@ -540,15 +540,11 @@ impl ScreenshotEditor {
                     true
                 }
                 "r" => {
-                    self.choose_tool(
-                        Some(self.preferences.shape_tool(Tool::Rectangle)),
-                        window,
-                        cx,
-                    );
+                    self.choose_tool(Some(Tool::Rectangle), window, cx);
                     true
                 }
                 "o" => {
-                    self.choose_tool(Some(self.preferences.shape_tool(Tool::Ellipse)), window, cx);
+                    self.choose_tool(Some(Tool::Ellipse), window, cx);
                     true
                 }
                 "b" => {
@@ -580,11 +576,7 @@ impl ScreenshotEditor {
                     true
                 }
                 "e" => {
-                    self.choose_tool(
-                        Some(Tool::Redact(self.preferences.redaction_style.get())),
-                        window,
-                        cx,
-                    );
+                    self.choose_tool(Some(self.preferences.redaction_tool.get()), window, cx);
                     true
                 }
                 "a" => {
