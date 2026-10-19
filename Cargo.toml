@@ -75,7 +75,7 @@ objc2-screen-capture-kit = "0.3.2"
 
 [package.metadata.packager]
 product-name = "Snipuno"
-version = "0.0.4"
+version = "0.0.5"
 identifier = "com.snipuno.desktop"
 icons = ["assets/app.icns", "assets/app.ico", "assets/128x128.png", "assets/256x256.png"]
 out-dir = "dist"
