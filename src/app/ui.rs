@@ -96,8 +96,8 @@ impl ScreenshotEditor {
                     "Click to measure detected edges, or drag along the chosen direction. Red guides can also be clicked or dragged. Press V to select and move measurements or guides.",
                 )
                 .hint("Exit tool", ["V", "or", "Esc"]),
-            Tool::Redact(_) | Tool::RectangleFill => ToolTooltip::new(label)
-                .description("Cover an area using blur, mosaic or a filled rectangle."),
+            Tool::Redact(_) | Tool::Fill => ToolTooltip::new(label)
+                .description("Cover an area using blur, mosaic or fill."),
             Tool::Spotlight => ToolTooltip::new(label)
                 .description("Keep an area bright and dim the rest of the image."),
             _ => ToolTooltip::new(label),
@@ -225,7 +225,7 @@ impl ScreenshotEditor {
                             [
                                 (Tool::Redact(RedactionStyle::Blur), Icon::Blur, "Blur"),
                                 (Tool::Redact(RedactionStyle::Mosaic), Icon::Mosaic, "Mosaic"),
-                                (Tool::RectangleFill, Icon::SquareFilled, "Filled rectangle"),
+                                (Tool::Fill, Icon::SquareFilled, "Fill"),
                             ]
                             .into_iter()
                             .map(|(tool, icon, label)| {
@@ -237,7 +237,7 @@ impl ScreenshotEditor {
                                         Tool::Redact(RedactionStyle::Mosaic) => {
                                             "Pixelate the marked area into color blocks."
                                         }
-                                        _ => "Fill a rectangular area with a color.",
+                                        _ => "Fill the marked area with a color.",
                                     })))
                             }),
                         )

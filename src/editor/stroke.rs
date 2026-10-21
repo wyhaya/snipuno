@@ -105,7 +105,7 @@ pub enum RedactionStyle {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tool {
     Rectangle,
-    RectangleFill,
+    Fill,
     Ellipse,
     Arrow,
     Line(LineStyle),
@@ -122,11 +122,11 @@ pub enum Tool {
 
 impl Tool {
     pub fn is_shape(self) -> bool {
-        matches!(self, Self::Rectangle | Self::RectangleFill | Self::Ellipse)
+        matches!(self, Self::Rectangle | Self::Fill | Self::Ellipse)
     }
 
     pub fn is_filled_shape(self) -> bool {
-        matches!(self, Self::RectangleFill)
+        matches!(self, Self::Fill)
     }
 
     pub fn has_auto_color(self) -> bool {
@@ -145,7 +145,7 @@ impl Tool {
     }
 
     pub fn is_redaction(self) -> bool {
-        matches!(self, Self::Redact(_) | Self::RectangleFill)
+        matches!(self, Self::Redact(_) | Self::Fill)
     }
 
     pub fn is_obscuring(self) -> bool {
@@ -167,7 +167,7 @@ impl Tool {
         matches!(
             self,
             Self::Rectangle
-                | Self::RectangleFill
+                | Self::Fill
                 | Self::Ellipse
                 | Self::Arrow
                 | Self::Line(_)
@@ -577,7 +577,7 @@ impl Stroke {
             }
             Tool::Redact(_)
             | Tool::Rectangle
-            | Tool::RectangleFill
+            | Tool::Fill
             | Tool::Spotlight
             | Tool::Text
             | Tool::Image(_) => {
@@ -623,7 +623,7 @@ impl Stroke {
         let bounds = self.bounds();
         match self.tool {
             Tool::Rectangle
-            | Tool::RectangleFill
+            | Tool::Fill
             | Tool::Spotlight
             | Tool::Magnifier
             | Tool::Text

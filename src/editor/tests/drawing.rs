@@ -41,12 +41,7 @@ fn short_drags_are_rejected_in_display_pixels() {
 
 #[test]
 fn constrained_shapes_remain_square_at_every_image_edge() {
-    for tool in [
-        Tool::Rectangle,
-        Tool::RectangleFill,
-        Tool::Ellipse,
-        Tool::Magnifier,
-    ] {
+    for tool in [Tool::Rectangle, Tool::Fill, Tool::Ellipse, Tool::Magnifier] {
         for target in [
             Point::new(-100.0, -50.0),
             Point::new(200.0, -50.0),

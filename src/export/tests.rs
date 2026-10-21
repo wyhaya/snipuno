@@ -93,7 +93,7 @@ fn partially_visible_layers_export_as_a_crop_of_the_complete_layer() {
     ]
     .map(|tool| stroke(tool, bounds(0.0, 0.0, 40.0, 30.0)))
     .to_vec();
-    let tool = Tool::RectangleFill;
+    let tool = Tool::Fill;
     for color in [None, Some(0xff123456)] {
         layers.push(filled_shape(tool, bounds(0.0, 0.0, 40.0, 30.0), color));
     }
@@ -145,9 +145,9 @@ fn fully_off_canvas_layers_leave_export_pixels_unchanged() {
                 Tool::Redact(RedactionStyle::Mosaic),
                 bounds(-100.0, 10.0, 40.0, 30.0),
             ),
-            filled_shape(Tool::RectangleFill, bounds(100.0, 10.0, 40.0, 30.0), None),
+            filled_shape(Tool::Fill, bounds(100.0, 10.0, 40.0, 30.0), None),
             filled_shape(
-                Tool::RectangleFill,
+                Tool::Fill,
                 bounds(100.0, 10.0, 40.0, 30.0),
                 Some(0xff123456),
             ),
@@ -275,7 +275,7 @@ fn spotlight_leaves_annotation_layers_undimmed_regardless_of_creation_order() {
     ]
     .map(|tool| stroke(tool, bounds(10.0, 20.0, 70.0, 60.0)))
     .to_vec();
-    let tool = Tool::RectangleFill;
+    let tool = Tool::Fill;
     for color in [None, Some(0xff123456)] {
         layers.push(filled_shape(tool, bounds(10.0, 20.0, 70.0, 60.0), color));
     }
@@ -369,11 +369,8 @@ fn magnifier_samples_original_pixels_at_its_center_with_crop_offset_and_round_ma
     for zoom in [1.5, 2.0, 2.7, 4.0] {
         let mut lens = stroke(Tool::Magnifier, bounds(20.0, 20.0, 60.0, 60.0));
         lens.magnifier = Some(Magnifier { zoom });
-        let mut underlay = filled_shape(
-            Tool::RectangleFill,
-            bounds(25.0, 25.0, 50.0, 50.0),
-            Some(0xffe02040),
-        );
+        let mut underlay =
+            filled_shape(Tool::Fill, bounds(25.0, 25.0, 50.0, 50.0), Some(0xffe02040));
         underlay.fill_opacity = 0.2;
         let mut image = snapshot(source.clone(), vec![underlay, lens]);
         image.bounds = bounds(30.0, 10.0, 120.0, 100.0);
@@ -398,8 +395,8 @@ fn magnifier_samples_original_pixels_at_its_center_with_crop_offset_and_round_ma
 }
 
 #[test]
-fn filled_rectangles_export_solid_and_background_colors_after_crop() {
-    let tool = Tool::RectangleFill;
+fn fills_export_solid_and_background_colors_after_crop() {
+    let tool = Tool::Fill;
     for color in [None, Some(0xff123456)] {
         let source = RgbaImage::from_fn(80, 40, |x, y| {
             Rgba(
@@ -483,7 +480,7 @@ fn automatic_brush_erases_along_its_path_after_crop_at_each_display_scale() {
 
 #[test]
 fn fill_opacity_is_applied_once_across_the_interior() {
-    let tool = Tool::RectangleFill;
+    let tool = Tool::Fill;
     for opacity in [0.2, 0.5, 1.0] {
         let mut shape = filled_shape(tool, bounds(5.0, 5.0, 30.0, 30.0), Some(0xffe02040));
         shape.fill_opacity = opacity;
@@ -516,7 +513,7 @@ fn automatic_and_solid_fill_opacity_blend_original_pixels_at_each_step() {
             [250, 250, 250, 255]
         })
     });
-    let tool = Tool::RectangleFill;
+    let tool = Tool::Fill;
     for color in [None, Some(0xff0c78c8)] {
         for step in 0..=10 {
             let opacity = step as f32 / 10.0;
@@ -579,7 +576,7 @@ fn export_cache_reuses_unchanged_results_and_invalidates_each_document_input() {
     changed.bounds = bounds(4.0, 2.0, 40.0, 32.0);
     variants.push(("crop", changed));
     let mut changed = original.clone();
-    changed.strokes[1].tool = Tool::RectangleFill;
+    changed.strokes[1].tool = Tool::Fill;
     changed.strokes[1].fill_color = Some(0xff123456);
     variants.push(("annotation", changed));
     let mut changed = original.clone();

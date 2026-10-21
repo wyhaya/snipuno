@@ -174,7 +174,7 @@ fn redaction_changes_keep_region_and_are_individually_undoable() {
     editor.strokes[0].effect_strength = EffectStrength::Max;
     for tool in [
         Tool::Redact(RedactionStyle::Mosaic),
-        Tool::RectangleFill,
+        Tool::Fill,
         Tool::Redact(RedactionStyle::Blur),
     ] {
         assert!(tool.is_redaction());
@@ -195,18 +195,18 @@ fn redaction_changes_keep_region_and_are_individually_undoable() {
         assert_eq!(editor.history_revision(), revision);
         let mut ordinary = selected_editor(tool);
         let original = ordinary.strokes().to_vec();
-        assert!(!ordinary.set_redaction_tool(Tool::RectangleFill));
+        assert!(!ordinary.set_redaction_tool(Tool::Fill));
         assert_eq!(ordinary.strokes(), original);
     }
 
     let mut draft = Editor::new(100.0, 100.0);
-    draft.begin(Tool::RectangleFill, Point::new(10.0, 10.0), 0xffabcdef, 5.0);
+    draft.begin(Tool::Fill, Point::new(10.0, 10.0), 0xffabcdef, 5.0);
     draft.draft.as_mut().unwrap().fill_color = Some(0xff123456);
     draft.draft.as_mut().unwrap().fill_opacity = 0.4;
     for tool in [
         Tool::Redact(RedactionStyle::Blur),
         Tool::Redact(RedactionStyle::Mosaic),
-        Tool::RectangleFill,
+        Tool::Fill,
     ] {
         let mut expected = draft.draft().unwrap().clone();
         expected.tool = tool;
@@ -220,7 +220,7 @@ fn redaction_changes_keep_region_and_are_individually_undoable() {
 
 #[test]
 fn fill_color_changes_preserve_shape_and_are_undoable() {
-    let tool = Tool::RectangleFill;
+    let tool = Tool::Fill;
     let mut editor = selected_editor(tool);
     let shape = editor.selected().unwrap().clone();
     assert!(shape.is_filled_shape());
@@ -249,8 +249,8 @@ fn fill_color_changes_preserve_shape_and_are_undoable() {
 }
 
 #[test]
-fn filled_rectangles_default_to_auto_and_preserve_constrained_size_and_move() {
-    let tool = Tool::RectangleFill;
+fn fills_default_to_auto_and_preserve_constrained_size_and_move() {
+    let tool = Tool::Fill;
     let mut editor = Editor::new(100.0, 100.0);
     editor.begin(tool, Point::new(10.0, 10.0), 0xffabcdef, 5.0);
     assert_eq!(editor.draft().unwrap().fill_color, None);
@@ -273,7 +273,7 @@ fn filled_rectangles_default_to_auto_and_preserve_constrained_size_and_move() {
 
 #[test]
 fn fill_opacity_edits_validate_values_and_preserve_other_properties() {
-    let tool = Tool::RectangleFill;
+    let tool = Tool::Fill;
     let mut editor = selected_editor(tool);
     let original = editor.selected().unwrap().clone();
     for opacity in [0.2, 0.5, 0.0, 1.0] {
@@ -465,7 +465,7 @@ fn magnifier_scroll_adjustment_selects_without_raising_and_is_undoable() {
     let mut editor = selected_editor(Tool::Magnifier);
     draw(
         &mut editor,
-        Tool::RectangleFill,
+        Tool::Fill,
         Point::new(250.0, 20.0),
         Point::new(300.0, 70.0),
     );
@@ -558,7 +558,7 @@ fn magnifier_scroll_adjustment_rejects_covered_lenses_and_invalid_targets() {
     }
     draw(
         &mut editor,
-        Tool::RectangleFill,
+        Tool::Fill,
         Point::new(140.0, 140.0),
         Point::new(180.0, 180.0),
     );
@@ -638,7 +638,7 @@ fn hovered_width_changes_select_without_raising_and_refresh_brush_bounds() {
         let mut editor = selected_editor(tool);
         draw(
             &mut editor,
-            Tool::RectangleFill,
+            Tool::Fill,
             Point::new(250.0, 20.0),
             Point::new(300.0, 70.0),
         );
@@ -665,7 +665,7 @@ fn hovered_strength_and_opacity_changes_preserve_other_properties_and_are_undoab
     for tool in [
         Tool::Redact(RedactionStyle::Blur),
         Tool::Redact(RedactionStyle::Mosaic),
-        Tool::RectangleFill,
+        Tool::Fill,
     ] {
         let mut editor = selected_editor(tool);
         draw(
@@ -695,11 +695,7 @@ fn hovered_strength_and_opacity_changes_preserve_other_properties_and_are_undoab
 
 #[test]
 fn hovered_style_no_ops_preserve_selection_preview_history_and_redo() {
-    for tool in [
-        Tool::Brush,
-        Tool::Redact(RedactionStyle::Blur),
-        Tool::RectangleFill,
-    ] {
+    for tool in [Tool::Brush, Tool::Redact(RedactionStyle::Blur), Tool::Fill] {
         let mut editor = selected_editor(tool);
         draw(
             &mut editor,
@@ -750,7 +746,7 @@ fn hovered_style_changes_reject_invalid_values_and_unsupported_tools() {
         assert_eq!(brush.set_stroke_width_at(point, 1.0, width), None);
         assert_eq!(brush.strokes(), before);
     }
-    let mut filled = selected_editor(Tool::RectangleFill);
+    let mut filled = selected_editor(Tool::Fill);
     let before = filled.strokes().to_vec();
     for opacity in [-0.1, 1.1, f32::NAN, f32::INFINITY] {
         assert_eq!(filled.set_fill_opacity_at(point, 1.0, opacity), None);
@@ -775,7 +771,7 @@ fn hovered_style_changes_reject_covered_targets_invalid_hits_and_active_drags() 
         Tool::Brush,
         Tool::Line(LineStyle::Solid),
         Tool::Redact(RedactionStyle::Blur),
-        Tool::RectangleFill,
+        Tool::Fill,
     ] {
         let mut editor = selected_editor(tool);
         let point = Point::new(160.0, 160.0);
@@ -835,11 +831,7 @@ fn hovered_style_changes_reject_covered_targets_invalid_hits_and_active_drags() 
 
 #[test]
 fn hovered_style_changes_commit_previous_preview_before_recording_edits() {
-    for tool in [
-        Tool::Brush,
-        Tool::Redact(RedactionStyle::Blur),
-        Tool::RectangleFill,
-    ] {
+    for tool in [Tool::Brush, Tool::Redact(RedactionStyle::Blur), Tool::Fill] {
         let mut editor = selected_editor(tool);
         draw(
             &mut editor,

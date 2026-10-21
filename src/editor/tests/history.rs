@@ -75,7 +75,7 @@ fn canceled_and_ineffective_edits_preserve_redo() {
 fn style_drag_commits_once_or_restores_the_original() {
     for tool in [
         Tool::Rectangle,
-        Tool::RectangleFill,
+        Tool::Fill,
         Tool::Redact(RedactionStyle::Blur),
         Tool::Magnifier,
     ] {
@@ -84,7 +84,7 @@ fn style_drag_commits_once_or_restores_the_original() {
         for cancel in [true, false] {
             for value in [2.0, 3.0, 4.0] {
                 match tool {
-                    Tool::RectangleFill => editor.preview_fill_opacity(value / 10.0),
+                    Tool::Fill => editor.preview_fill_opacity(value / 10.0),
                     Tool::Magnifier => editor.preview_magnifier_zoom(value),
                     Tool::Redact(_) => editor.preview_effect_strength(EffectStrength::Max),
                     _ => editor.preview_selected_width(value),
@@ -97,7 +97,7 @@ fn style_drag_commits_once_or_restores_the_original() {
                 assert!(editor.finish_style_change());
                 let mark = editor.selected().unwrap();
                 match tool {
-                    Tool::RectangleFill => assert_eq!(mark.fill_opacity, 0.4),
+                    Tool::Fill => assert_eq!(mark.fill_opacity, 0.4),
                     Tool::Magnifier => assert_eq!(mark.magnifier.as_ref().unwrap().zoom, 4.0),
                     Tool::Redact(_) => assert_eq!(mark.effect_strength, EffectStrength::Max),
                     _ => assert_eq!(mark.width, 4.0),

@@ -943,11 +943,9 @@ fn stroke_path_with_width(
         );
     }
     if match stroke.tool {
-        Tool::Rectangle
-        | Tool::RectangleFill
-        | Tool::Magnifier
-        | Tool::Ellipse
-        | Tool::Number(_) => bounds.width <= 0.0 || bounds.height <= 0.0,
+        Tool::Rectangle | Tool::Fill | Tool::Magnifier | Tool::Ellipse | Tool::Number(_) => {
+            bounds.width <= 0.0 || bounds.height <= 0.0
+        }
         Tool::Arrow | Tool::Line(_) | Tool::Guide(_) | Tool::Measure(_) => {
             (stroke.end.x - stroke.start.x).hypot(stroke.end.y - stroke.start.y) <= f32::EPSILON
         }
@@ -1000,7 +998,7 @@ fn stroke_path_with_width(
         | Tool::Image(_)
         | Tool::Text
         | Tool::Spotlight => return None,
-        Tool::Rectangle | Tool::RectangleFill => {
+        Tool::Rectangle | Tool::Fill => {
             return rectangle_path(
                 bounds,
                 viewport,

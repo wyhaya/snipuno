@@ -124,12 +124,12 @@ impl ScreenshotEditor {
                 );
                 self.set_line_style(next, window, cx);
             }
-            Tool::Redact(_) | Tool::RectangleFill => {
+            Tool::Redact(_) | Tool::Fill => {
                 let next = cycle_option(
                     &[
                         Tool::Redact(RedactionStyle::Blur),
                         Tool::Redact(RedactionStyle::Mosaic),
-                        Tool::RectangleFill,
+                        Tool::Fill,
                     ],
                     tool,
                     reverse,

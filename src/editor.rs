@@ -176,7 +176,7 @@ impl Editor {
             && matches!(
                 draft.tool,
                 Tool::Rectangle
-                    | Tool::RectangleFill
+                    | Tool::Fill
                     | Tool::Spotlight
                     | Tool::Magnifier
                     | Tool::Ellipse

@@ -19,7 +19,7 @@ Snipuno is a simple, lightweight, open-source screen capture and annotation soft
   - Brush
   - Text
   - Number
-  - Redact (blur or mosaic)
+  - Redact (blur, mosaic or fill)
   - Spotlight
   - Magnifier
   - Measure & guides

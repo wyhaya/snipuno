@@ -24,8 +24,8 @@ pub(super) struct ToolPreferences {
     pub arrow_double_headed: Cell<bool>,
     pub color: Cell<u32>,
     pub brush_auto_color: Cell<bool>,
-    rectangle_fill_color: Cell<Option<u32>>,
-    rectangle_fill_opacity: Cell<f32>,
+    fill_color: Cell<Option<u32>>,
+    fill_opacity: Cell<f32>,
     pub stroke_width: Cell<f32>,
     pub number_tail: Cell<TailDirection>,
     pub text_bubble: Cell<bool>,
@@ -45,8 +45,8 @@ impl Default for ToolPreferences {
             arrow_double_headed: Cell::new(false),
             color: Cell::new(PALETTE[0].0),
             brush_auto_color: Cell::new(false),
-            rectangle_fill_color: Cell::new(None),
-            rectangle_fill_opacity: Cell::new(1.0),
+            fill_color: Cell::new(None),
+            fill_opacity: Cell::new(1.0),
             stroke_width: Cell::new(DEFAULT_STROKE_WIDTH),
             number_tail: Cell::default(),
             text_bubble: Cell::new(false),
@@ -59,28 +59,28 @@ impl Default for ToolPreferences {
 impl ToolPreferences {
     pub fn fill_opacity(&self, tool: Tool) -> f32 {
         match tool {
-            Tool::RectangleFill => self.rectangle_fill_opacity.get(),
+            Tool::Fill => self.fill_opacity.get(),
             _ => 1.0,
         }
     }
 
     pub fn set_fill_opacity(&self, tool: Tool, opacity: f32) {
         match tool {
-            Tool::RectangleFill => self.rectangle_fill_opacity.set(opacity),
+            Tool::Fill => self.fill_opacity.set(opacity),
             _ => {}
         }
     }
 
     pub fn fill_color(&self, tool: Tool) -> Option<u32> {
         match tool {
-            Tool::RectangleFill => self.rectangle_fill_color.get(),
+            Tool::Fill => self.fill_color.get(),
             _ => None,
         }
     }
 
     pub fn set_fill_color(&self, tool: Tool, color: Option<u32>) {
         match tool {
-            Tool::RectangleFill => self.rectangle_fill_color.set(color),
+            Tool::Fill => self.fill_color.set(color),
             _ => {}
         }
     }
@@ -92,7 +92,7 @@ impl ToolPreferences {
     pub fn selected_tool(&self) -> Option<Tool> {
         self.selected_tool.get().map(|tool| match tool {
             Tool::Line(_) => Tool::Line(self.line_style.get()),
-            Tool::Redact(_) | Tool::RectangleFill => self.redaction_tool.get(),
+            Tool::Redact(_) | Tool::Fill => self.redaction_tool.get(),
             Tool::Measure(_) => Tool::Measure(self.measurement_axis.get()),
             _ => tool,
         })
@@ -112,31 +112,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rectangle_fill_remembers_opacity_across_tool_changes() {
+    fn fill_remembers_opacity_across_tool_changes() {
         let preferences = ToolPreferences::default();
-        assert_eq!(preferences.fill_opacity(Tool::RectangleFill), 1.0);
-        preferences.set_fill_opacity(Tool::RectangleFill, 0.2);
+        assert_eq!(preferences.fill_opacity(Tool::Fill), 1.0);
+        preferences.set_fill_opacity(Tool::Fill, 0.2);
         preferences.select_tool(Some(Tool::Redact(RedactionStyle::Mosaic)));
         preferences.select_tool(Some(Tool::Rectangle));
-        preferences.select_tool(Some(Tool::RectangleFill));
-        assert_eq!(preferences.fill_opacity(Tool::RectangleFill), 0.2);
+        preferences.select_tool(Some(Tool::Fill));
+        assert_eq!(preferences.fill_opacity(Tool::Fill), 0.2);
         assert_eq!(preferences.fill_opacity(Tool::Rectangle), 1.0);
     }
 
     #[test]
-    fn rectangle_fill_remembers_color_independently_of_outline_color() {
+    fn fill_remembers_color_independently_of_outline_color() {
         let preferences = ToolPreferences::default();
-        assert_eq!(preferences.fill_color(Tool::RectangleFill), None);
-        preferences.set_fill_color(Tool::RectangleFill, Some(0xff123456));
+        assert_eq!(preferences.fill_color(Tool::Fill), None);
+        preferences.set_fill_color(Tool::Fill, Some(0xff123456));
         preferences.select_tool(Some(Tool::Rectangle));
         preferences.color.set(0xffabcdef);
-        preferences.select_tool(Some(Tool::RectangleFill));
-        assert_eq!(
-            preferences.fill_color(Tool::RectangleFill),
-            Some(0xff123456)
-        );
-        preferences.set_fill_color(Tool::RectangleFill, None);
-        assert_eq!(preferences.fill_color(Tool::RectangleFill), None);
+        preferences.select_tool(Some(Tool::Fill));
+        assert_eq!(preferences.fill_color(Tool::Fill), Some(0xff123456));
+        preferences.set_fill_color(Tool::Fill, None);
+        assert_eq!(preferences.fill_color(Tool::Fill), None);
         assert_eq!(preferences.color.get(), 0xffabcdef);
     }
 
@@ -147,17 +144,14 @@ mod tests {
             preferences.redaction_tool.get(),
             Tool::Redact(RedactionStyle::Blur)
         );
-        assert_eq!(
-            preferences.select_tool(Some(Tool::RectangleFill)),
-            Some(Tool::RectangleFill)
-        );
+        assert_eq!(preferences.select_tool(Some(Tool::Fill)), Some(Tool::Fill));
         for tool in [Tool::Rectangle, Tool::Ellipse, Tool::Arrow] {
             assert_eq!(preferences.select_tool(Some(tool)), Some(tool));
-            assert_eq!(preferences.redaction_tool.get(), Tool::RectangleFill);
+            assert_eq!(preferences.redaction_tool.get(), Tool::Fill);
         }
         assert_eq!(
             preferences.select_tool(Some(preferences.redaction_tool.get())),
-            Some(Tool::RectangleFill)
+            Some(Tool::Fill)
         );
         preferences.select_tool(Some(Tool::Redact(RedactionStyle::Mosaic)));
         assert_eq!(
